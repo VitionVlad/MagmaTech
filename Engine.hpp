@@ -1,15 +1,18 @@
 #include <iostream>
 #include <fstream>
 #include "vulkan/vulkan.h"
-#include "GLFW/glfw3.h"
 #include "glm/glm.hpp"
 #include <string>
 #include <vector>
 
 #ifdef _WIN32
-#define PLATFORM 1
+#include "GLFW/glfw3.h"
 #elif __ANDROID__
-#define PLATFORM 2
+#include <android_native_app_glue.h>
+#include <android/native_activity.h>
+#include "android/native_window.h"
+#include "android/native_window_jni.h"
+#include "vulkan/vulkan_android.h"
 #endif
 
 class Engine {
@@ -44,7 +47,7 @@ private:
 		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		createInfo.pApplicationInfo = &appinfo;
 
-		#ifdef PLATFORM 1
+		#ifdef _WIN32
 				uint32_t glfwExtensionCount = 0;
 				const char** glfwExtensions;
 
@@ -52,7 +55,18 @@ private:
 
 				createInfo.enabledExtensionCount = glfwExtensionCount;
 				createInfo.ppEnabledExtensionNames = glfwExtensions;
-		#endif
+        #elif __ANDROID__
+            uint32_t extensions_count = 0;
+            vkEnumerateInstanceExtensionProperties( nullptr, &extensions_count, nullptr );
+            std::vector<VkExtensionProperties> extensionProperties(extensions_count);
+            vkEnumerateInstanceExtensionProperties(nullptr, &extensions_count, extensionProperties.data());
+            std::vector<char*> names(extensions_count);
+            for(int i = 0; i != extensions_count; i++){
+                names[i] = extensionProperties[i].extensionName;
+            }
+            createInfo.enabledExtensionCount = extensions_count;
+            createInfo.ppEnabledExtensionNames = names.data();
+        #endif
 
 		uint32_t layercont = 0;
 		std::vector<VkLayerProperties> lprop{};
@@ -69,7 +83,7 @@ private:
 		createInfo.ppEnabledLayerNames = layerNames.data();
 		createInfo.enabledLayerCount = layercont;
 
-		if (uselayer == false) {
+		if (!uselayer) {
 			createInfo.enabledLayerCount = 0;
 		}
 
@@ -145,13 +159,18 @@ private:
 	}
 	VkSurfaceKHR surface{};
 	void createSurface() {
-		#ifdef PLATFORM 1
+		#ifdef _WIN32
 		glfwCreateWindowSurface(instance, window, nullptr, &surface);
-		#elif PLATFORM 2
+        #elif __ANDROID__
+        VkAndroidSurfaceCreateInfoKHR surfaceCreateInfo = {};
+        surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+        surfaceCreateInfo.window = window;
+        vkCreateAndroidSurfaceKHR(instance, &surfaceCreateInfo, NULL, &surface);
 		#endif
 	}
 	VkSwapchainKHR swapChain;
 	std::vector<VkImageView> swapChainImageViews;
+	std::vector<VkImage> swapChainImages;
 	void createswapchain() {
 		VkSurfaceCapabilitiesKHR capabilities{};
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities);
@@ -173,7 +192,6 @@ private:
 		createInfo.oldSwapchain = VK_NULL_HANDLE;
 		vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain);
 		std::cout << "log: swapchain created" << std::endl;
-		std::vector<VkImage> swapChainImages;
 		vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
 		swapChainImages.resize(imageCount);
 		vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
@@ -375,17 +393,30 @@ public:
 	VkQueue presentQueue{};
 	VkDevice device{};
 	VkRenderPass renderPass{};
+    #ifdef _WIN32
 	GLFWwindow *window;
+    #elif __ANDROID__
+    ANativeWindow *window;
+	ANativeWindow_Buffer windowbuffer;
+    #endif
 	glm::ivec2 resolution = glm::ivec2(800, 600);
 	glm::ivec2 oldres = glm::ivec2(800, 600);
 	bool uselayer = false;
-	void init(std::string appname) {
-		#ifdef PLATFORM 1
+    #ifdef __ANDROID__
+	void init(std::string appname, JNIEnv* env, jobject& surf) {
+    #else
+    void init(std::string appname) {
+    #endif
+		#ifdef _WIN32
 			std::cout << "log: platform = WIN32" << std::endl;
 			glfwInit();
 			glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 			window = glfwCreateWindow(resolution.x, resolution.y, (appname + " - Windows").c_str(), nullptr, nullptr);
 			std::cout << "log: window created" << std::endl;
+        #elif __ANDROID__
+		window = ANativeWindow_fromSurface(env, surf);
+        resolution.x = ANativeWindow_getWidth(window);
+		resolution.y = ANativeWindow_getHeight(window);
 		#endif
 		createInstance(appname);
 		getDevice();
@@ -399,12 +430,14 @@ public:
 		std::cout << "log: engine initied with success" << std::endl;
 	}
 	bool shouldterminate() {
-		#ifdef PLATFORM 1
+		#ifdef _WIN32
 			return !glfwWindowShouldClose(window);
+        #else
+        return true;
 		#endif
 	}
 	void beginmainpass() {
-		#ifdef PLATFORM 1
+		#ifdef _WIN32
 		glfwGetFramebufferSize(window, &resolution.x, &resolution.y);
 		#endif
 		vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
@@ -490,8 +523,12 @@ public:
 		oldres.x = resolution.x;
 		oldres.y = resolution.y;
 
-		#ifdef PLATFORM 1
+		#ifdef _WIN32
 		glfwPollEvents();
+        #elif __ANDROID__
+		ANativeWindow_lock(window, &windowbuffer, NULL);
+		memcpy(windowbuffer.bits, &swapChainImages[imageIndex],  resolution.x*resolution.y*4); // ARGB_8888
+		ANativeWindow_unlockAndPost(window);
 		#endif
 	}
 	void terminate() {
@@ -512,8 +549,11 @@ public:
 		vkDestroySurfaceKHR(instance, surface, nullptr);
 		vkDestroyDevice(device, nullptr);
 		vkDestroyInstance(instance, nullptr);
-		glfwDestroyWindow(window);
+        #ifdef _WIN32
+        glfwDestroyWindow(window);
 		glfwTerminate();
+        #elif __ANDROID__
+        #endif
 	}
 };
 
