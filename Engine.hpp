@@ -8,7 +8,6 @@
 #ifdef _WIN32
 #include "GLFW/glfw3.h"
 #elif __ANDROID__
-#include <android_native_app_glue.h>
 #include <android/native_activity.h>
 #include "android/native_window.h"
 #include "android/native_window_jni.h"
@@ -47,26 +46,23 @@ private:
 		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		createInfo.pApplicationInfo = &appinfo;
 
-		#ifdef _WIN32
-				uint32_t glfwExtensionCount = 0;
-				const char** glfwExtensions;
+#ifdef _WIN32
+		uint32_t glfwExtensionCount = 0;
+		const char** glfwExtensions;
 
-				glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+		glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-				createInfo.enabledExtensionCount = glfwExtensionCount;
-				createInfo.ppEnabledExtensionNames = glfwExtensions;
-        #elif __ANDROID__
-            uint32_t extensions_count = 0;
-            vkEnumerateInstanceExtensionProperties( nullptr, &extensions_count, nullptr );
-            std::vector<VkExtensionProperties> extensionProperties(extensions_count);
-            vkEnumerateInstanceExtensionProperties(nullptr, &extensions_count, extensionProperties.data());
-            std::vector<char*> names(extensions_count);
-            for(int i = 0; i != extensions_count; i++){
-                names[i] = extensionProperties[i].extensionName;
-            }
-            createInfo.enabledExtensionCount = extensions_count;
-            createInfo.ppEnabledExtensionNames = names.data();
-        #endif
+		createInfo.enabledExtensionCount = glfwExtensionCount;
+		createInfo.ppEnabledExtensionNames = glfwExtensions;
+#elif __ANDROID__
+		std::vector<const char*> instance_extensions;
+
+		instance_extensions.push_back("VK_KHR_surface");
+		instance_extensions.push_back("VK_KHR_android_surface");
+
+		createInfo.enabledExtensionCount = instance_extensions.size();
+		createInfo.ppEnabledExtensionNames = instance_extensions.data();
+#endif
 
 		uint32_t layercont = 0;
 		std::vector<VkLayerProperties> lprop{};
@@ -128,6 +124,9 @@ private:
 		queueinfo.pQueuePriorities = &prior;
 		queueinfo.queueFamilyIndex = queueFamilyIndex;
 
+		VkDeviceCreateInfo createInfo{};
+
+#ifdef _WIN32
 		uint32_t extensioncount = 0;
 		std::vector<VkExtensionProperties> extensionproprites{};
 		vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensioncount, nullptr);
@@ -139,8 +138,17 @@ private:
 			extensionNames[i] = extensionproprites[i].extensionName;
 			std::cout << "log:Enabling Device Extension:" << extensionproprites[i].extensionName << std::endl;
 		}
+		createInfo.enabledExtensionCount = extensioncount;
+		createInfo.ppEnabledExtensionNames = extensionNames.data();
+#elif __ANDROID__
+		std::vector<const char*> device_extensions;
 
-		VkDeviceCreateInfo createInfo{};
+		device_extensions.push_back("VK_KHR_swapchain");
+
+		createInfo.enabledExtensionCount = device_extensions.size();
+		createInfo.ppEnabledExtensionNames = device_extensions.data();
+#endif
+
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		createInfo.pQueueCreateInfos = &queueinfo;
 		createInfo.queueCreateInfoCount = 1;
@@ -148,8 +156,6 @@ private:
 		VkPhysicalDeviceFeatures deviceFeatures{};
 
 		createInfo.pEnabledFeatures = &deviceFeatures;
-		createInfo.enabledExtensionCount = extensioncount;
-		createInfo.ppEnabledExtensionNames = extensionNames.data();
 		vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
 
 		vkGetDeviceQueue(device, queueinfo.queueFamilyIndex, 0, &graphicsQueue);
@@ -159,28 +165,33 @@ private:
 	}
 	VkSurfaceKHR surface{};
 	void createSurface() {
-		#ifdef _WIN32
+#ifdef _WIN32
 		glfwCreateWindowSurface(instance, window, nullptr, &surface);
-        #elif __ANDROID__
-        VkAndroidSurfaceCreateInfoKHR surfaceCreateInfo = {};
-        surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-        surfaceCreateInfo.window = window;
-        vkCreateAndroidSurfaceKHR(instance, &surfaceCreateInfo, NULL, &surface);
-		#endif
+#elif __ANDROID__
+		VkAndroidSurfaceCreateInfoKHR surfaceCreateInfo = {};
+		surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+		surfaceCreateInfo.window = window;
+		vkCreateAndroidSurfaceKHR(instance, &surfaceCreateInfo, NULL, &surface);
+#endif
 	}
 	VkSwapchainKHR swapChain;
 	std::vector<VkImageView> swapChainImageViews;
 	std::vector<VkImage> swapChainImages;
+	std::vector<VkSurfaceFormatKHR> surform{};
 	void createswapchain() {
 		VkSurfaceCapabilitiesKHR capabilities{};
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities);
+		uint32_t surfcnt;
+		vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfcnt, nullptr);
+		surform.resize(surfcnt);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfcnt, surform.data());
 		uint32_t imageCount = capabilities.minImageCount + 1;
 		VkSwapchainCreateInfoKHR createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 		createInfo.surface = surface;
 		createInfo.minImageCount = imageCount;
-		createInfo.imageFormat = VK_FORMAT_B8G8R8A8_SRGB;
-		createInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+		createInfo.imageFormat = surform[0].format;
+		createInfo.imageColorSpace = surform[0].colorSpace;
 		createInfo.imageExtent.height = resolution.y;
 		createInfo.imageExtent.width = resolution.x;
 		createInfo.imageArrayLayers = 1;
@@ -190,6 +201,7 @@ private:
 		createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 		createInfo.oldSwapchain = VK_NULL_HANDLE;
+		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
 		vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain);
 		std::cout << "log: swapchain created" << std::endl;
 		vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
@@ -202,7 +214,7 @@ private:
 			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 			createInfo.image = swapChainImages[i];
 			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			createInfo.format = VK_FORMAT_B8G8R8A8_SRGB;
+			createInfo.format = surform[0].format;
 			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
 			createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
 			createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -220,7 +232,7 @@ private:
 	VkSubpassDependency dependency{};
 	void createrepass() {
 		std::vector < VkAttachmentDescription> colorAttachment(2);
-		colorAttachment[0].format = VK_FORMAT_B8G8R8A8_SRGB;
+		colorAttachment[0].format = surform[0].format;
 		colorAttachment[0].samples = VK_SAMPLE_COUNT_1_BIT;
 		colorAttachment[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		colorAttachment[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -237,11 +249,14 @@ private:
 		colorAttachment[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		colorAttachment[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		colorAttachment[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
 		std::vector<VkAttachmentReference> colorAttachmentRef(2);
 		colorAttachmentRef[0].attachment = 0;
 		colorAttachmentRef[0].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
 		colorAttachmentRef[1].attachment = 1;
-		colorAttachmentRef[1].layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+		colorAttachmentRef[1].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
 		VkSubpassDescription subpass{};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpass.colorAttachmentCount = 1;
@@ -252,11 +267,7 @@ private:
 		renderPassInfo.pAttachments = colorAttachment.data();
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
-		renderPassInfo.dependencyCount = 1;
-		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		renderPassInfo.pDependencies = &dependency;
+		renderPassInfo.dependencyCount = 0;
 		vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
 		std::cout << "log: main renderpass created" << std::endl;
 	}
@@ -393,31 +404,31 @@ public:
 	VkQueue presentQueue{};
 	VkDevice device{};
 	VkRenderPass renderPass{};
-    #ifdef _WIN32
-	GLFWwindow *window;
-    #elif __ANDROID__
-    ANativeWindow *window;
+#ifdef _WIN32
+	GLFWwindow* window;
+#elif __ANDROID__
+	ANativeWindow* window;
 	ANativeWindow_Buffer windowbuffer;
-    #endif
+#endif
 	glm::ivec2 resolution = glm::ivec2(800, 600);
 	glm::ivec2 oldres = glm::ivec2(800, 600);
 	bool uselayer = false;
-    #ifdef __ANDROID__
-	void init(std::string appname, JNIEnv* env, jobject& surf) {
-    #else
-    void init(std::string appname) {
-    #endif
-		#ifdef _WIN32
-			std::cout << "log: platform = WIN32" << std::endl;
-			glfwInit();
-			glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-			window = glfwCreateWindow(resolution.x, resolution.y, (appname + " - Windows").c_str(), nullptr, nullptr);
-			std::cout << "log: window created" << std::endl;
-        #elif __ANDROID__
-		window = ANativeWindow_fromSurface(env, surf);
-        resolution.x = ANativeWindow_getWidth(window);
+#ifdef __ANDROID__
+	void init(std::string appname, ANativeWindow* window1) {
+#else
+	void init(std::string appname) {
+#endif
+#ifdef _WIN32
+		std::cout << "log: platform = WIN32" << std::endl;
+		glfwInit();
+		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+		window = glfwCreateWindow(resolution.x, resolution.y, (appname + " - Windows").c_str(), nullptr, nullptr);
+		std::cout << "log: window created" << std::endl;
+#elif __ANDROID__
+		window = window1;
+		resolution.x = ANativeWindow_getWidth(window);
 		resolution.y = ANativeWindow_getHeight(window);
-		#endif
+#endif
 		createInstance(appname);
 		getDevice();
 		createSurface();
@@ -430,16 +441,19 @@ public:
 		std::cout << "log: engine initied with success" << std::endl;
 	}
 	bool shouldterminate() {
-		#ifdef _WIN32
-			return !glfwWindowShouldClose(window);
-        #else
-        return true;
-		#endif
+#ifdef _WIN32
+		return !glfwWindowShouldClose(window);
+#else
+		return true;
+#endif
 	}
 	void beginmainpass() {
-		#ifdef _WIN32
+#ifdef _WIN32
 		glfwGetFramebufferSize(window, &resolution.x, &resolution.y);
-		#endif
+#elif __ANDROID__
+		resolution.x = ANativeWindow_getWidth(window);
+		resolution.y = ANativeWindow_getHeight(window);
+#endif
 		vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 		vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
@@ -462,8 +476,8 @@ public:
 		renderPassInfo.renderArea.extent.width = resolution.x;
 		renderPassInfo.renderArea.extent.height = resolution.y;
 		std::vector<VkClearValue> clearColor(2);
-		clearColor[0] = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-		clearColor[1].depthStencil = {1.0f, 0};
+		clearColor[0] = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
+		clearColor[1].depthStencil = { 1.0f, 0 };
 		renderPassInfo.clearValueCount = 2;
 		renderPassInfo.pClearValues = clearColor.data();
 
@@ -514,7 +528,8 @@ public:
 
 		if (res == VK_ERROR_OUT_OF_DATE_KHR) {
 			recreateswap();
-		}else if (resolution.x != oldres.x || resolution.y != oldres.y) {
+		}
+		else if (resolution.x != oldres.x || resolution.y != oldres.y) {
 			recreateswap();
 		}
 
@@ -523,13 +538,10 @@ public:
 		oldres.x = resolution.x;
 		oldres.y = resolution.y;
 
-		#ifdef _WIN32
+#ifdef _WIN32
 		glfwPollEvents();
-        #elif __ANDROID__
-		ANativeWindow_lock(window, &windowbuffer, NULL);
-		memcpy(windowbuffer.bits, &swapChainImages[imageIndex],  resolution.x*resolution.y*4); // ARGB_8888
-		ANativeWindow_unlockAndPost(window);
-		#endif
+#elif __ANDROID__
+#endif
 	}
 	void terminate() {
 		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -549,13 +561,13 @@ public:
 		vkDestroySurfaceKHR(instance, surface, nullptr);
 		vkDestroyDevice(device, nullptr);
 		vkDestroyInstance(instance, nullptr);
-        #ifdef _WIN32
-        glfwDestroyWindow(window);
+#ifdef _WIN32
+		glfwDestroyWindow(window);
 		glfwTerminate();
-        #elif __ANDROID__
-        #endif
+#elif __ANDROID__
+#endif
 	}
-};
+	};
 
 class Mesh {
 private:
@@ -655,9 +667,9 @@ private:
 		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
 		rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
-		rasterizer.depthBiasConstantFactor = 0.0f; 
-		rasterizer.depthBiasClamp = 0.0f; 
-		rasterizer.depthBiasSlopeFactor = 0.0f; 
+		rasterizer.depthBiasConstantFactor = 0.0f;
+		rasterizer.depthBiasClamp = 0.0f;
+		rasterizer.depthBiasSlopeFactor = 0.0f;
 
 		VkPipelineMultisampleStateCreateInfo multisampling{};
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
