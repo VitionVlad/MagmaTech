@@ -164,7 +164,11 @@ private:
 		std::cout << "log: device created" << std::endl;
 	}
 	VkSurfaceKHR surface{};
+#ifdef _WIN32
 	void createSurface() {
+#elif __ANDROID__
+	void createSurface(ANativeWindow * window) {
+#endif
 #ifdef _WIN32
 		glfwCreateWindowSurface(instance, window, nullptr, &surface);
 #elif __ANDROID__
@@ -178,6 +182,7 @@ private:
 	std::vector<VkImageView> swapChainImageViews;
 	std::vector<VkImage> swapChainImages;
 	std::vector<VkSurfaceFormatKHR> surform{};
+	uint32_t choseform;
 	void createswapchain() {
 		VkSurfaceCapabilitiesKHR capabilities{};
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities);
@@ -185,13 +190,21 @@ private:
 		vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfcnt, nullptr);
 		surform.resize(surfcnt);
 		vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfcnt, surform.data());
+
+		for (int i = 0; i != surfcnt; i++) {
+			if (surform[i].format == VK_FORMAT_R8G8B8A8_UNORM) {
+				choseform = i;
+				break;
+			}
+		}
+
 		uint32_t imageCount = capabilities.minImageCount + 1;
 		VkSwapchainCreateInfoKHR createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 		createInfo.surface = surface;
 		createInfo.minImageCount = imageCount;
-		createInfo.imageFormat = surform[0].format;
-		createInfo.imageColorSpace = surform[0].colorSpace;
+		createInfo.imageFormat = surform[choseform].format;
+		createInfo.imageColorSpace = surform[choseform].colorSpace;
 		createInfo.imageExtent.height = resolution.y;
 		createInfo.imageExtent.width = resolution.x;
 		createInfo.imageArrayLayers = 1;
@@ -214,7 +227,7 @@ private:
 			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 			createInfo.image = swapChainImages[i];
 			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			createInfo.format = surform[0].format;
+			createInfo.format = surform[choseform].format;
 			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
 			createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
 			createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -232,7 +245,7 @@ private:
 	VkSubpassDependency dependency{};
 	void createrepass() {
 		std::vector < VkAttachmentDescription> colorAttachment(2);
-		colorAttachment[0].format = surform[0].format;
+		colorAttachment[0].format = surform[choseform].format;
 		colorAttachment[0].samples = VK_SAMPLE_COUNT_1_BIT;
 		colorAttachment[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		colorAttachment[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -407,14 +420,12 @@ public:
 #ifdef _WIN32
 	GLFWwindow* window;
 #elif __ANDROID__
-	ANativeWindow* window;
-	ANativeWindow_Buffer windowbuffer;
 #endif
 	glm::ivec2 resolution = glm::ivec2(800, 600);
 	glm::ivec2 oldres = glm::ivec2(800, 600);
 	bool uselayer = false;
 #ifdef __ANDROID__
-	void init(std::string appname, ANativeWindow* window1) {
+	void init(std::string appname, ANativeWindow * window) {
 #else
 	void init(std::string appname) {
 #endif
@@ -425,13 +436,16 @@ public:
 		window = glfwCreateWindow(resolution.x, resolution.y, (appname + " - Windows").c_str(), nullptr, nullptr);
 		std::cout << "log: window created" << std::endl;
 #elif __ANDROID__
-		window = window1;
 		resolution.x = ANativeWindow_getWidth(window);
 		resolution.y = ANativeWindow_getHeight(window);
 #endif
 		createInstance(appname);
-		getDevice();
+#ifdef __ANDROID__
+		createSurface(window);
+#else
 		createSurface();
+#endif
+		getDevice();
 		createswapchain();
 		createdepthbuffer();
 		createrepass();
@@ -447,7 +461,11 @@ public:
 		return true;
 #endif
 	}
+#ifdef __ANDROID__
+	void beginmainpass(ANativeWindow * window) {
+#else
 	void beginmainpass() {
+#endif
 #ifdef _WIN32
 		glfwGetFramebufferSize(window, &resolution.x, &resolution.y);
 #elif __ANDROID__
@@ -476,7 +494,7 @@ public:
 		renderPassInfo.renderArea.extent.width = resolution.x;
 		renderPassInfo.renderArea.extent.height = resolution.y;
 		std::vector<VkClearValue> clearColor(2);
-		clearColor[0] = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
+		clearColor[0] = { {{0.0f, 0.0f, 1.0f, 1.0f}} };
 		clearColor[1].depthStencil = { 1.0f, 0 };
 		renderPassInfo.clearValueCount = 2;
 		renderPassInfo.pClearValues = clearColor.data();
