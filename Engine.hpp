@@ -11,6 +11,7 @@
 #include <android/native_activity.h>
 #include "android/native_window.h"
 #include "android/native_window_jni.h"
+#include "android/hardware_buffer_jni.h"
 #include "vulkan/vulkan_android.h"
 #endif
 
@@ -93,7 +94,7 @@ private:
 		uint32_t deviceCount = 0;
 		vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 		if (deviceCount == 0) {
-			throw std::runtime_error("error: failed to find GPUs with Vulkan support!");
+			std::cout << "error: cannot find an vulkan capable device" << std::endl;
 		}
 		std::vector<VkPhysicalDevice> devices(deviceCount);
 		vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
@@ -102,13 +103,12 @@ private:
 		vkGetPhysicalDeviceProperties(physicalDevice, &physprop);
 		std::cout << "log: device name = " << physprop.deviceName << std::endl;
 		std::cout << "log: device type = " << physprop.deviceType << std::endl;
+		devicename = physprop.deviceName;
 
 		uint32_t queueFamilyCount = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
 		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 		vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
-
-		queueFamilyIndex = queueFamilies[queueFamilyCount - 1].queueCount;
 
 		for (int i = 0; i != queueFamilyCount; i++) {
 			if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
@@ -167,7 +167,7 @@ private:
 #ifdef _WIN32
 	void createSurface() {
 #elif __ANDROID__
-	void createSurface(ANativeWindow * window) {
+	void createSurface(ANativeWindow *window) {
 #endif
 #ifdef _WIN32
 		glfwCreateWindowSurface(instance, window, nullptr, &surface);
@@ -175,7 +175,7 @@ private:
 		VkAndroidSurfaceCreateInfoKHR surfaceCreateInfo = {};
 		surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
 		surfaceCreateInfo.window = window;
-		vkCreateAndroidSurfaceKHR(instance, &surfaceCreateInfo, NULL, &surface);
+		vkCreateAndroidSurfaceKHR(instance, &surfaceCreateInfo, nullptr, &surface); //sigsev
 #endif
 	}
 	VkSwapchainKHR swapChain;
@@ -186,8 +186,10 @@ private:
 	void createswapchain() {
 		VkSurfaceCapabilitiesKHR capabilities{};
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities);
-		uint32_t surfcnt;
-		vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfcnt, nullptr);
+
+		uint32_t surfcnt = 0;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfcnt, nullptr); // problema e aici
+
 		surform.resize(surfcnt);
 		vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfcnt, surform.data());
 
@@ -209,7 +211,6 @@ private:
 		createInfo.imageExtent.width = resolution.x;
 		createInfo.imageArrayLayers = 1;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-		createInfo.minImageCount = capabilities.minImageCount;
 		createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
 		createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -243,6 +244,7 @@ private:
 	}
 	VkRenderPassCreateInfo renderPassInfo{};
 	VkSubpassDependency dependency{};
+	VkFormat depthformat = VK_FORMAT_D32_SFLOAT;
 	void createrepass() {
 		std::vector < VkAttachmentDescription> colorAttachment(2);
 		colorAttachment[0].format = surform[choseform].format;
@@ -254,7 +256,7 @@ private:
 		colorAttachment[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		colorAttachment[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-		colorAttachment[1].format = VK_FORMAT_D32_SFLOAT;
+		colorAttachment[1].format = depthformat;
 		colorAttachment[1].samples = VK_SAMPLE_COUNT_1_BIT;
 		colorAttachment[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		colorAttachment[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -286,6 +288,8 @@ private:
 	}
 	std::vector<VkFramebuffer> swapChainFramebuffers;
 	void createdepthbuffer() {
+		VkFormatProperties props;
+		vkGetPhysicalDeviceFormatProperties(physicalDevice, depthformat, &props);
 		VkImageCreateInfo imagecreate{};
 		imagecreate.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		imagecreate.imageType = VK_IMAGE_TYPE_2D;
@@ -293,7 +297,7 @@ private:
 		imagecreate.extent.width = resolution.x;
 		imagecreate.extent.height = resolution.y;
 		imagecreate.extent.depth = 1;
-		imagecreate.format = VK_FORMAT_D32_SFLOAT;
+		imagecreate.format = depthformat;
 		imagecreate.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imagecreate.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 		imagecreate.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -318,7 +322,7 @@ private:
 		viewinfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		viewinfo.image = depthImage;
 		viewinfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		viewinfo.format = VK_FORMAT_D32_SFLOAT;
+		viewinfo.format = depthformat;
 		viewinfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
 		viewinfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
 		viewinfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -410,6 +414,7 @@ private:
 		createswfrm();
 	}
 public:
+	std::string devicename;
 	uint32_t currentFrame = 0;
 	VkCommandPool commandPool{};
 	std::vector<VkCommandBuffer> commandBuffers;
@@ -419,30 +424,24 @@ public:
 	VkRenderPass renderPass{};
 #ifdef _WIN32
 	GLFWwindow* window;
-#elif __ANDROID__
 #endif
 	glm::ivec2 resolution = glm::ivec2(800, 600);
 	glm::ivec2 oldres = glm::ivec2(800, 600);
 	bool uselayer = false;
 #ifdef __ANDROID__
 	void init(std::string appname, ANativeWindow * window) {
+		resolution.x = ANativeWindow_getWidth(window);
+		resolution.y = ANativeWindow_getHeight(window);
+		createInstance(appname);
+		createSurface(window);
 #else
 	void init(std::string appname) {
-#endif
-#ifdef _WIN32
 		std::cout << "log: platform = WIN32" << std::endl;
 		glfwInit();
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		window = glfwCreateWindow(resolution.x, resolution.y, (appname + " - Windows").c_str(), nullptr, nullptr);
 		std::cout << "log: window created" << std::endl;
-#elif __ANDROID__
-		resolution.x = ANativeWindow_getWidth(window);
-		resolution.y = ANativeWindow_getHeight(window);
-#endif
 		createInstance(appname);
-#ifdef __ANDROID__
-		createSurface(window);
-#else
 		createSurface();
 #endif
 		getDevice();
@@ -494,7 +493,7 @@ public:
 		renderPassInfo.renderArea.extent.width = resolution.x;
 		renderPassInfo.renderArea.extent.height = resolution.y;
 		std::vector<VkClearValue> clearColor(2);
-		clearColor[0] = { {{0.0f, 0.0f, 1.0f, 1.0f}} };
+		clearColor[0] = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
 		clearColor[1].depthStencil = { 1.0f, 0 };
 		renderPassInfo.clearValueCount = 2;
 		renderPassInfo.pClearValues = clearColor.data();
