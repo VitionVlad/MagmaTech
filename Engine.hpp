@@ -33,15 +33,40 @@ private:
 
 		throw std::runtime_error("failed to find suitable memory type!");
 	}
+	bool cfw = false;
 	void createInstance(std::string appname) {
+		std::ifstream readcfg{};
+		std::ofstream writecfg{};
+		readcfg.open(pathprefix+"eng/cfg/engine.cfg");
+
+		if (!readcfg.is_open()){
+			std::cout << "log: failed to read engine configuration, creating a new one..." << std::endl;
+			cfw = true;
+			writecfg.open(pathprefix + "eng/cfg/engine.cfg");
+		}
+
 		std::cout << "log: instance creating began" << std::endl;
 		VkApplicationInfo appinfo{};
 		appinfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 		appinfo.pApplicationName = appname.c_str();
 		appinfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-		appinfo.pEngineName = "ShadowVK";
+		appinfo.pEngineName = "MagmaTech";
 		appinfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-		appinfo.apiVersion = VK_API_VERSION_1_0;
+		appinfo.apiVersion = VK_API_VERSION_1_3;
+
+		if (!cfw) {
+			std::string nm{};
+			int argument;
+			while (readcfg >> nm >> argument) {
+				if (nm == "vkver") {
+					appinfo.apiVersion = argument;
+				}
+			}
+		}
+		else {
+			writecfg << "vkver " << VK_API_VERSION_1_3 << std::endl;
+		}
+
 
 		VkInstanceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -91,6 +116,9 @@ private:
 	VkDeviceQueueCreateInfo queueinfo{};
 	uint32_t queueFamilyIndex;
 	void getDevice() {
+		std::fstream cfgwork{};
+		cfgwork.open(pathprefix + "eng/cfg/engine.cfg", std::ios_base::app);
+
 		uint32_t deviceCount = 0;
 		vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 		if (deviceCount == 0) {
@@ -98,7 +126,26 @@ private:
 		}
 		std::vector<VkPhysicalDevice> devices(deviceCount);
 		vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
-		physicalDevice = devices[deviceCount - 1];
+		int choseddevice = deviceCount - 1;
+
+		if (!cfw) {
+			std::string param;
+			int arg;
+			while (cfgwork >> param >> arg) {
+				if (param == "vkphysdev") {
+					choseddevice = arg;
+				}
+			}
+		}
+		else {
+			cfgwork << "vkphysdev " << choseddevice << std::endl;
+			cfgwork << "wsizex 800" << std::endl;
+			cfgwork << "wsizey 600" << std::endl;
+			cfgwork << "wfull 0" << std::endl;
+		}
+
+		physicalDevice = devices[choseddevice];
+
 		VkPhysicalDeviceProperties physprop{};
 		vkGetPhysicalDeviceProperties(physicalDevice, &physprop);
 		std::cout << "log: device name = " << physprop.deviceName << std::endl;
@@ -414,6 +461,7 @@ private:
 		createswfrm();
 	}
 public:
+	std::string pathprefix = "";
 	std::string devicename;
 	uint32_t currentFrame = 0;
 	VkCommandPool commandPool{};
@@ -436,10 +484,36 @@ public:
 		createSurface(window);
 #else
 	void init(std::string appname) {
-		std::cout << "log: platform = WIN32" << std::endl;
+		std::ifstream cfgwork{};
+		cfgwork.open(pathprefix + "eng/cfg/engine.cfg");
+		GLFWmonitor *mon = nullptr;
+
+		if (!cfw) {
+			std::string param;
+			int argument;
+			while (cfgwork >> param >> argument) {
+				if (param == "wsizex") {
+					resolution.x = argument;
+				}
+				if (param == "wsizey") {
+					resolution.y = argument;
+				}
+				if (param == "wfull" && argument == 1) {
+					mon = glfwGetPrimaryMonitor();
+				}
+			}
+		}
+
+		std::string platformname = "UNKNOWN";
+
+		#ifdef _WIN32
+		platformname = "WIN32";
+		#endif
+
+		std::cout << "log: platform = " << platformname << std::endl;
 		glfwInit();
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-		window = glfwCreateWindow(resolution.x, resolution.y, (appname + " - Windows").c_str(), nullptr, nullptr);
+		window = glfwCreateWindow(resolution.x, resolution.y, (appname + " - " + platformname).c_str(), mon, nullptr);
 		std::cout << "log: window created" << std::endl;
 		createInstance(appname);
 		createSurface();
@@ -547,6 +621,10 @@ public:
 			recreateswap();
 		}
 		else if (resolution.x != oldres.x || resolution.y != oldres.y) {
+			std::ofstream cfgwork{};
+			cfgwork.open(pathprefix + "eng/cfg/engine.cfg", std::ios_base::app);
+			cfgwork << "\nwsizex " << resolution.x << std::endl;
+			cfgwork << "wsizey " << resolution.y << std::endl;
 			recreateswap();
 		}
 
@@ -612,7 +690,7 @@ private:
 		return shaderModule;
 	}
 	VkPipeline graphicsPipeline{};
-	void createPipeline(Engine eng, std::string vertshader, std::string fragshader) {
+	void createPipeline(Engine& eng, std::string vertshader, std::string fragshader) {
 		auto vertShaderCode = loadbin(vertshader);
 		auto fragShaderCode = loadbin(fragshader);
 
