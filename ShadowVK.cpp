@@ -7,9 +7,9 @@ int main(){
 	Mesh test;
 	vertex vert[3];
 
-	vert[0].position = glm::vec3(0.0, -0.5, 0);
-	vert[1].position = glm::vec3(0.5, 0.5, 0);
-	vert[2].position = glm::vec3(-0.5, 0.5, 0);
+	vert[0].position = glm::vec3(0.0, -0.5, -5);
+	vert[1].position = glm::vec3(0.5, 0.5, -5);
+	vert[2].position = glm::vec3(-0.5, 0.5, -5);
 
 	vert[0].uv = glm::vec2(0, 0);
 	vert[1].uv = glm::vec2(0, 0);

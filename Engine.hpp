@@ -2,6 +2,7 @@
 #include <fstream>
 #include "vulkan/vulkan.h"
 #include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
 #include <string>
 #include <vector>
 #include <array>
@@ -51,6 +52,14 @@ struct vertex {
 
 		return attributeDescriptions;
 	}
+};
+
+struct UniformBufferObject {
+	glm::vec2 resolution;
+	glm::vec3 cameraPosition;
+	alignas(16) glm::mat4 mvp;
+	alignas(16) glm::mat4 mesh;
+	alignas(16) glm::mat4 smvp;
 };
 
 class Engine {
@@ -509,7 +518,39 @@ private:
 		}
 		return shaderModule;
 	}
+	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
+		VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = size;
+		bufferInfo.usage = usage;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create buffer!");
+		}
+
+		VkMemoryRequirements memRequirements;
+		vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+
+		VkMemoryAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+
+		if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+			throw std::runtime_error("failed to allocate buffer memory!");
+		}
+
+		vkBindBufferMemory(device, buffer, bufferMemory, 0);
+	}
 public:
+	UniformBufferObject ubo{};
+	bool useOrthographic = false;
+	float fov = 90.0f;
+	float zNear = 0.1f;
+	float zFar = 100.0f;
+	glm::vec2 rot{};
+	glm::vec3 pos{};
 	std::string pathprefix = "";
 	std::string devicename;
 	uint32_t currentFrame = 0;
@@ -537,19 +578,7 @@ public:
 
 		throw std::runtime_error("failed to find suitable memory type!");
 	}
-	uint32_t vfindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-		VkPhysicalDeviceMemoryProperties memProperties;
-		vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
-
-		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-			if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-				return i;
-			}
-		}
-
-		throw std::runtime_error("failed to find suitable memory type!");
-	}
-	void createPipeline(std::string vertshader, std::string fragshader, VkPipeline& graphicsPipeline) {
+	void createPipeline(std::string vertshader, std::string fragshader, VkPipeline& graphicsPipeline, VkPipelineLayout& pipelineLayout, VkDescriptorSetLayout& descriptorSetLayout) {
 		auto vertShaderCode = loadbin(vertshader);
 		auto fragShaderCode = loadbin(fragshader);
 
@@ -658,13 +687,10 @@ public:
 		colorBlending.blendConstants[2] = 0.0f;
 		colorBlending.blendConstants[3] = 0.0f;
 
-		VkPipelineLayout pipelineLayout;
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 0;
-		pipelineLayoutInfo.pSetLayouts = nullptr;
-		pipelineLayoutInfo.pushConstantRangeCount = 0;
-		pipelineLayoutInfo.pPushConstantRanges = nullptr;
+		pipelineLayoutInfo.setLayoutCount = 1;
+		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 		vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
 
 		VkPipelineDepthStencilStateCreateInfo depthStencil{};
@@ -715,6 +741,67 @@ public:
 
 		vkAllocateMemory(device, &allocInfo, nullptr, &vertexBufferMemory);
 		vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
+	}
+	void createDescriptorSetLayout(VkDescriptorSetLayout& descriptorSetLayout) {
+		VkDescriptorSetLayoutBinding uboLayoutBinding{};
+		uboLayoutBinding.binding = 0;
+		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboLayoutBinding.descriptorCount = 1;
+		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_ALL;
+		VkDescriptorSetLayoutCreateInfo layoutInfo{};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = 1;
+		layoutInfo.pBindings = &uboLayoutBinding;
+		vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout);
+	}
+	void createUniformBuffers(std::vector<VkBuffer>& uniformBuffers, std::vector<VkDeviceMemory>& uniformBuffersMemory, std::vector<void*>& uniformBuffersMapped, VkDescriptorPool& descriptorPool, std::vector<VkDescriptorSet>& descriptorSets, VkDescriptorSetLayout& descriptorSetLayout) {
+		VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+
+		uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+		uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+		uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
+
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+			createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
+			vkMapMemory(device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
+		}
+
+		VkDescriptorPoolSize poolSize{};
+		poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+		VkDescriptorPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.poolSizeCount = 1;
+		poolInfo.pPoolSizes = &poolSize;
+		poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+		vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool);
+
+		std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
+		VkDescriptorSetAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = descriptorPool;
+		allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+		allocInfo.pSetLayouts = layouts.data();
+		descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
+		vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data());
+
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+			VkDescriptorBufferInfo bufferInfo{};
+			bufferInfo.buffer = uniformBuffers[i];
+			bufferInfo.offset = 0;
+			bufferInfo.range = sizeof(UniformBufferObject);
+			VkWriteDescriptorSet descriptorWrite{};
+			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = descriptorSets[i];
+			descriptorWrite.dstBinding = 0;
+			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pBufferInfo = &bufferInfo;
+			vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+		}
 	}
 #ifdef __ANDROID__
 	void init(std::string appname, ANativeWindow * window) {
@@ -911,17 +998,36 @@ private:
 	VkPipeline graphicsPipeline{};
 	VkBuffer vertexBuffer{};
 	VkDeviceMemory vertexBufferMemory{};
+	glm::mat4 posm;
+	glm::mat4 rotxm;
+	glm::mat4 rotym;
+	glm::mat4 rotzm;
+	glm::mat4 scalem;
+	VkDescriptorSetLayout descriptorSetLayout;
+	VkPipelineLayout pipelineLayout;
+	std::vector<VkBuffer> uniformBuffers;
+	std::vector<VkDeviceMemory> uniformBuffersMemory;
+	std::vector<void*> uniformBuffersMapped;
+	VkDescriptorPool descriptorPool;
+	std::vector<VkDescriptorSet> descriptorSets;
 public:
 	int totalvertex = 3;
 	vertex* vertexdata{};
+	glm::vec3 pos;
+	glm::vec3 rot;
+	glm::vec3 scale;
 	void create(Engine& eng, std::string vertshader, std::string fragshader, vertex *vertices, int size) {
 		vs = vertshader;
 		fs = fragshader;
 		vertexdata = vertices;
 		totalvertex = size;
 
-		eng.createPipeline(vertshader, fragshader, graphicsPipeline);
+		std::cout << sizeof(UniformBufferObject) << std::endl;
+
+		eng.createDescriptorSetLayout(descriptorSetLayout);
+		eng.createPipeline(vertshader, fragshader, graphicsPipeline, pipelineLayout, descriptorSetLayout);
 		eng.createvertexbuf(vertices, size, vertexBuffer, vertexBufferMemory);
+		eng.createUniformBuffers(uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, descriptorPool, descriptorSets, descriptorSetLayout);
 
 		void* data;
 		vkMapMemory(eng.device, vertexBufferMemory, 0, sizeof(vertices[0]) * size, 0, &data);
@@ -929,15 +1035,38 @@ public:
 		vkUnmapMemory(eng.device, vertexBufferMemory);
 	}
 	void Draw(Engine& eng) {
+		posm = glm::translate(glm::mat4(), pos);
+		rotxm = glm::rotate(glm::mat4(), rot.x, glm::vec3(1, 0, 0));
+		rotym = glm::rotate(glm::mat4(), rot.y, glm::vec3(0, 1, 0));
+		rotzm = glm::rotate(glm::mat4(), rot.z, glm::vec3(0, 0, 1));
+		scalem = glm::scale(glm::mat4(), scale);
+		eng.ubo.mesh = scalem * posm * rotxm * rotym * rotzm;
+		if (eng.useOrthographic) {
+			rotzm = glm::ortho(-eng.fov, eng.fov, -eng.fov/(eng.resolution.x / eng.resolution.y), eng.fov / (eng.resolution.x / eng.resolution.y), eng.zNear, eng.zFar);
+		}
+		else {
+			rotzm = glm::perspective(eng.fov, (float)eng.resolution.x/eng.resolution.y, eng.zNear, eng.zFar);
+		}
+		posm = glm::translate(glm::mat4(), eng.pos);
+		rotxm = glm::rotate(glm::mat4(), eng.rot.x, glm::vec3(1, 0, 0));
+		rotym = glm::rotate(glm::mat4(), eng.rot.y, glm::vec3(0, 1, 0));
+		eng.ubo.mvp = glm::perspective(eng.fov, (float)eng.resolution.x / eng.resolution.y, eng.zNear, eng.zFar);
+		eng.ubo.cameraPosition = eng.pos;
+		eng.ubo.resolution = eng.resolution;
+
+		memcpy(uniformBuffersMapped[eng.currentFrame], &eng.ubo, sizeof(UniformBufferObject));
+
 		if (eng.resolution.x != eng.oldres.x || eng.resolution.y != eng.oldres.y) {
 			vkDestroyPipeline(eng.device, graphicsPipeline, nullptr);
-			eng.createPipeline(vs, fs, graphicsPipeline);
+			eng.createPipeline(vs, fs, graphicsPipeline, pipelineLayout, descriptorSetLayout);
 		}
 		vkCmdBindPipeline(eng.commandBuffers[eng.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
 		VkBuffer vertexBuffers[] = { vertexBuffer };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(eng.commandBuffers[eng.currentFrame], 0, 1, vertexBuffers, offsets);
+
+		vkCmdBindDescriptorSets(eng.commandBuffers[eng.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[eng.currentFrame], 0, nullptr);
 
 		VkViewport viewport{};
 		viewport.x = 0.0f;
