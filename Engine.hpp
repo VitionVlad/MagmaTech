@@ -57,9 +57,21 @@ struct vertex {
 struct UniformBufferObject {
 	glm::vec2 resolution;
 	glm::vec3 cameraPosition;
-	alignas(16) glm::mat4 mvp;
-	alignas(16) glm::mat4 mesh;
-	alignas(16) glm::mat4 smvp;
+	alignas(16) glm::mat4 projection;
+	alignas(16) glm::mat4 translate;
+	alignas(16) glm::mat4 rotx;
+	alignas(16) glm::mat4 roty;
+
+	alignas(16) glm::mat4 mtranslate;
+	alignas(16) glm::mat4 mroty;
+	alignas(16) glm::mat4 mrotx;
+	alignas(16) glm::mat4 mrotz;
+	alignas(16) glm::mat4 mscale;
+
+	alignas(16) glm::mat4 sprojection;
+	alignas(16) glm::mat4 stranslate;
+	alignas(16) glm::mat4 srotx;
+	alignas(16) glm::mat4 sroty;
 };
 
 class Engine {
@@ -72,9 +84,9 @@ private:
 	void createInstance(std::string appname) {
 		std::ifstream readcfg{};
 		std::ofstream writecfg{};
-		readcfg.open(pathprefix+"eng/cfg/engine.cfg");
+		readcfg.open(pathprefix + "eng/cfg/engine.cfg");
 
-		if (!readcfg.is_open()){
+		if (!readcfg.is_open()) {
 			std::cout << "log: failed to read engine configuration, creating a new one..." << std::endl;
 			cfw = true;
 			writecfg.open(pathprefix + "eng/cfg/engine.cfg");
@@ -249,7 +261,7 @@ private:
 #ifdef _WIN32
 	void createSurface() {
 #elif __ANDROID__
-	void createSurface(ANativeWindow *window) {
+	void createSurface(ANativeWindow * window) {
 #endif
 #ifdef _WIN32
 		glfwCreateWindowSurface(instance, window, nullptr, &surface);
@@ -270,7 +282,7 @@ private:
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities);
 
 		uint32_t surfcnt = 0;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfcnt, nullptr); // problema e aici
+		vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfcnt, nullptr); // problema e aici
 
 		surform.resize(surfcnt);
 		vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfcnt, surform.data());
@@ -495,7 +507,7 @@ private:
 		createswapchain();
 		createswfrm();
 	}
-	static std::vector<char> loadbin(const std::string& filename) {
+	static std::vector<char> loadbin(const std::string & filename) {
 		std::ifstream file(filename, std::ios::ate | std::ios::binary);
 		if (!file.is_open()) {
 			throw std::runtime_error("Error:Failed to open file");
@@ -507,7 +519,7 @@ private:
 		file.close();
 		return buffer;
 	}
-	VkShaderModule createShaderModule(const std::vector<char>& code) {
+	VkShaderModule createShaderModule(const std::vector<char>&code) {
 		VkShaderModuleCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		createInfo.codeSize = code.size();
@@ -518,7 +530,7 @@ private:
 		}
 		return shaderModule;
 	}
-	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
+	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer & buffer, VkDeviceMemory & bufferMemory) {
 		VkBufferCreateInfo bufferInfo{};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size = size;
@@ -549,8 +561,8 @@ public:
 	float fov = 90.0f;
 	float zNear = 0.1f;
 	float zFar = 100.0f;
-	glm::vec2 rot{};
-	glm::vec3 pos{};
+	glm::vec2 rot = glm::vec2(0, 0);
+	glm::vec3 pos = glm::vec3(0, 0, 0);
 	std::string pathprefix = "";
 	std::string devicename;
 	uint32_t currentFrame = 0;
@@ -578,7 +590,7 @@ public:
 
 		throw std::runtime_error("failed to find suitable memory type!");
 	}
-	void createPipeline(std::string vertshader, std::string fragshader, VkPipeline& graphicsPipeline, VkPipelineLayout& pipelineLayout, VkDescriptorSetLayout& descriptorSetLayout) {
+	void createPipeline(std::string vertshader, std::string fragshader, VkPipeline & graphicsPipeline, VkPipelineLayout & pipelineLayout, VkDescriptorSetLayout & descriptorSetLayout) {
 		auto vertShaderCode = loadbin(vertshader);
 		auto fragShaderCode = loadbin(fragshader);
 
@@ -723,7 +735,7 @@ public:
 		vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline);
 		std::cout << "log: pipeline created" << std::endl;
 	}
-	void createvertexbuf(vertex *vertices, int size, VkBuffer& vertexBuffer, VkDeviceMemory& vertexBufferMemory) {
+	void createvertexbuf(vertex * vertices, int size, VkBuffer & vertexBuffer, VkDeviceMemory & vertexBufferMemory) {
 		VkBufferCreateInfo bufferInfo{};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size = sizeof(vertices[0]) * size;
@@ -742,7 +754,7 @@ public:
 		vkAllocateMemory(device, &allocInfo, nullptr, &vertexBufferMemory);
 		vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
 	}
-	void createDescriptorSetLayout(VkDescriptorSetLayout& descriptorSetLayout) {
+	void createDescriptorSetLayout(VkDescriptorSetLayout & descriptorSetLayout) {
 		VkDescriptorSetLayoutBinding uboLayoutBinding{};
 		uboLayoutBinding.binding = 0;
 		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -754,7 +766,7 @@ public:
 		layoutInfo.pBindings = &uboLayoutBinding;
 		vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout);
 	}
-	void createUniformBuffers(std::vector<VkBuffer>& uniformBuffers, std::vector<VkDeviceMemory>& uniformBuffersMemory, std::vector<void*>& uniformBuffersMapped, VkDescriptorPool& descriptorPool, std::vector<VkDescriptorSet>& descriptorSets, VkDescriptorSetLayout& descriptorSetLayout) {
+	void createUniformBuffers(std::vector<VkBuffer>&uniformBuffers, std::vector<VkDeviceMemory>&uniformBuffersMemory, std::vector<void*>&uniformBuffersMapped, VkDescriptorPool & descriptorPool, std::vector<VkDescriptorSet>&descriptorSets, VkDescriptorSetLayout & descriptorSetLayout) {
 		VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
 		uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
@@ -813,7 +825,7 @@ public:
 	void init(std::string appname) {
 		std::ifstream cfgwork{};
 		cfgwork.open(pathprefix + "eng/cfg/engine.cfg");
-		GLFWmonitor *mon = nullptr;
+		GLFWmonitor* mon = nullptr;
 
 		if (!cfw) {
 			std::string param;
@@ -833,9 +845,9 @@ public:
 
 		std::string platformname = "UNKNOWN";
 
-		#ifdef _WIN32
+#ifdef _WIN32
 		platformname = "WIN32";
-		#endif
+#endif
 
 		std::cout << "log: platform = " << platformname << std::endl;
 		glfwInit();
@@ -998,11 +1010,6 @@ private:
 	VkPipeline graphicsPipeline{};
 	VkBuffer vertexBuffer{};
 	VkDeviceMemory vertexBufferMemory{};
-	glm::mat4 posm;
-	glm::mat4 rotxm;
-	glm::mat4 rotym;
-	glm::mat4 rotzm;
-	glm::mat4 scalem;
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkPipelineLayout pipelineLayout;
 	std::vector<VkBuffer> uniformBuffers;
@@ -1016,13 +1023,11 @@ public:
 	glm::vec3 pos;
 	glm::vec3 rot;
 	glm::vec3 scale;
-	void create(Engine& eng, std::string vertshader, std::string fragshader, vertex *vertices, int size) {
+	void create(Engine& eng, std::string vertshader, std::string fragshader, vertex* vertices, int size) {
 		vs = vertshader;
 		fs = fragshader;
 		vertexdata = vertices;
 		totalvertex = size;
-
-		std::cout << sizeof(UniformBufferObject) << std::endl;
 
 		eng.createDescriptorSetLayout(descriptorSetLayout);
 		eng.createPipeline(vertshader, fragshader, graphicsPipeline, pipelineLayout, descriptorSetLayout);
@@ -1035,26 +1040,26 @@ public:
 		vkUnmapMemory(eng.device, vertexBufferMemory);
 	}
 	void Draw(Engine& eng) {
-		posm = glm::translate(glm::mat4(), pos);
-		rotxm = glm::rotate(glm::mat4(), rot.x, glm::vec3(1, 0, 0));
-		rotym = glm::rotate(glm::mat4(), rot.y, glm::vec3(0, 1, 0));
-		rotzm = glm::rotate(glm::mat4(), rot.z, glm::vec3(0, 0, 1));
-		scalem = glm::scale(glm::mat4(), scale);
-		eng.ubo.mesh = scalem * posm * rotxm * rotym * rotzm;
 		if (eng.useOrthographic) {
-			rotzm = glm::ortho(-eng.fov, eng.fov, -eng.fov/(eng.resolution.x / eng.resolution.y), eng.fov / (eng.resolution.x / eng.resolution.y), eng.zNear, eng.zFar);
+			eng.ubo.projection = glm::ortho(-eng.fov, eng.fov, -eng.fov / (eng.resolution.x / eng.resolution.y), eng.fov / (eng.resolution.x / eng.resolution.y), eng.zNear, eng.zFar);
 		}
 		else {
-			rotzm = glm::perspective(eng.fov, (float)eng.resolution.x/eng.resolution.y, eng.zNear, eng.zFar);
+			eng.ubo.projection = glm::perspective(eng.fov, (float)eng.resolution.x / eng.resolution.y, eng.zNear, eng.zFar);
 		}
-		posm = glm::translate(glm::mat4(), eng.pos);
-		rotxm = glm::rotate(glm::mat4(), eng.rot.x, glm::vec3(1, 0, 0));
-		rotym = glm::rotate(glm::mat4(), eng.rot.y, glm::vec3(0, 1, 0));
-		eng.ubo.mvp = glm::perspective(eng.fov, (float)eng.resolution.x / eng.resolution.y, eng.zNear, eng.zFar);
+		eng.ubo.translate = glm::translate(glm::mat4(1.0f), glm::vec3(eng.pos.x, eng.pos.y, eng.pos.z));
+		eng.ubo.rotx = glm::rotate(glm::mat4(1.0f), eng.rot.x, glm::vec3(1, 0, 0));
+		eng.ubo.roty = glm::rotate(glm::mat4(1.0f), eng.rot.y, glm::vec3(0, 1, 0));
+
 		eng.ubo.cameraPosition = eng.pos;
 		eng.ubo.resolution = eng.resolution;
 
-		memcpy(uniformBuffersMapped[eng.currentFrame], &eng.ubo, sizeof(UniformBufferObject));
+		eng.ubo.mtranslate = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x, pos.y, pos.z));
+		eng.ubo.mrotx = glm::rotate(glm::mat4(1.0f), rot.x, glm::vec3(1, 0, 0));
+		eng.ubo.mroty = glm::rotate(glm::mat4(1.0f), rot.y, glm::vec3(0, 1, 0));
+		eng.ubo.mrotz = glm::rotate(glm::mat4(1.0f), rot.z, glm::vec3(0, 0, 1));
+		eng.ubo.mscale = glm::scale(glm::mat4(1.0f), glm::vec3(scale.x, scale.y, scale.z));
+
+		memcpy(uniformBuffersMapped[eng.currentFrame], &eng.ubo, sizeof(eng.ubo));
 
 		if (eng.resolution.x != eng.oldres.x || eng.resolution.y != eng.oldres.y) {
 			vkDestroyPipeline(eng.device, graphicsPipeline, nullptr);
