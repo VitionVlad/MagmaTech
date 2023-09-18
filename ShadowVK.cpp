@@ -1,4 +1,5 @@
 ﻿#include <iostream>
+#include "ResourceLoader.hpp"
 #include "Engine.hpp"
 
 Engine eng;
@@ -32,21 +33,11 @@ int main(){
     glm::dvec2 mousepos;
 	eng.init("test");
 	Mesh test;
-	vertex vert[3];
 
-	vert[0].position = glm::vec3(0.0, -0.5, -5);
-	vert[1].position = glm::vec3(0.5, 0.5, -5);
-	vert[2].position = glm::vec3(-0.5, 0.5, -5);
+    Loader objtest;
+    objtest.loadobj("data/m.obj");
 
-	vert[0].uv = glm::vec2(0, 0);
-	vert[1].uv = glm::vec2(0, 0);
-	vert[2].uv = glm::vec2(0, 0);
-
-	vert[0].normal = glm::vec3(0, 0, 0);
-	vert[1].normal = glm::vec3(0, 0, 0);
-	vert[2].normal = glm::vec3(0, 0, 0);
-
-	test.create(eng, "data/raw/vert.spv", "data/raw/frag.spv", vert, 3);
+	test.create(eng, "data/raw/vert.spv", "data/raw/frag.spv", objtest.vertex.data(), objtest.uv.data(), objtest.normals.data(), objtest.vertex.size());
 	while (eng.shouldterminate()) {
         glfwSetInputMode(eng.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         glfwGetCursorPos(eng.window, &mousepos.x, &mousepos.y);

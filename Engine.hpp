@@ -1019,24 +1019,37 @@ private:
 	std::vector<VkDescriptorSet> descriptorSets;
 public:
 	int totalvertex = 3;
-	vertex* vertexdata{};
+	std::vector <vertex> vertexdata{};
 	glm::vec3 pos;
 	glm::vec3 rot;
 	glm::vec3 scale;
-	void create(Engine& eng, std::string vertshader, std::string fragshader, vertex* vertices, int size) {
+	void create(Engine& eng, std::string vertshader, std::string fragshader, glm::vec3* vertexes, glm::vec2* uv, glm::vec3* normals, int size) {
 		vs = vertshader;
 		fs = fragshader;
-		vertexdata = vertices;
+		vertexdata.resize(size);
 		totalvertex = size;
+
+		for (int i = 0; i != size; i++) {
+			vertexdata[i].position.x = vertexes[i].x;
+			vertexdata[i].position.y = vertexes[i].y;
+			vertexdata[i].position.z = vertexes[i].z;
+
+			vertexdata[i].uv.x = uv[i].x;
+			vertexdata[i].uv.y = uv[i].y;
+
+			vertexdata[i].normal.x = normals[i].x;
+			vertexdata[i].normal.y = normals[i].y;
+			vertexdata[i].normal.z = normals[i].z;
+		}
 
 		eng.createDescriptorSetLayout(descriptorSetLayout);
 		eng.createPipeline(vertshader, fragshader, graphicsPipeline, pipelineLayout, descriptorSetLayout);
-		eng.createvertexbuf(vertices, size, vertexBuffer, vertexBufferMemory);
+		eng.createvertexbuf(vertexdata.data(), size, vertexBuffer, vertexBufferMemory);
 		eng.createUniformBuffers(uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, descriptorPool, descriptorSets, descriptorSetLayout);
 
 		void* data;
-		vkMapMemory(eng.device, vertexBufferMemory, 0, sizeof(vertices[0]) * size, 0, &data);
-		memcpy(data, vertices, sizeof(vertices[0]) * size);
+		vkMapMemory(eng.device, vertexBufferMemory, 0, sizeof(vertexdata[0]) * size, 0, &data);
+		memcpy(data, vertexdata.data(), sizeof(vertexdata[0]) * size);
 		vkUnmapMemory(eng.device, vertexBufferMemory);
 	}
 	void Draw(Engine& eng) {
