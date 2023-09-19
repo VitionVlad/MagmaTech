@@ -5,6 +5,7 @@ layout(location = 1) in vec2 uv;
 layout(location = 2) in vec3 normal;
 
 layout(binding = 0) uniform UniformBufferObject {
+    int useLookAt;
     vec2 resolution;
     vec3 cameraPosition;
 
@@ -23,6 +24,9 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 stranslate;
     mat4 srotx;
     mat4 sroty;
+
+    vec3 lightPos;
+    vec3 lightColor;
 } ubo;
 
 void main() {

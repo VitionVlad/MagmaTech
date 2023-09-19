@@ -55,6 +55,7 @@ struct vertex {
 };
 
 struct UniformBufferObject {
+	int useLookAt = 0;
 	glm::vec2 resolution;
 	glm::vec3 cameraPosition;
 	alignas(16) glm::mat4 projection;
@@ -72,6 +73,8 @@ struct UniformBufferObject {
 	alignas(16) glm::mat4 stranslate;
 	alignas(16) glm::mat4 srotx;
 	alignas(16) glm::mat4 sroty;
+	glm::vec3 lightPos;
+	glm::vec3 lightColor;
 };
 
 class Engine {
@@ -557,6 +560,17 @@ private:
 	}
 public:
 	UniformBufferObject ubo{};
+
+	int ShadowMapResolution = 4000;
+	glm::vec3 ShadowPos = glm::vec3(0, 0, 0);
+	glm::vec3 ShadowLookAt = glm::vec3(0, 0, 0);
+	glm::vec2 ShadowRot = glm::vec2(0, 0);
+	bool useShadowLookAt = true;
+	bool ShadowOrtho = true;
+	float sFov = 10;
+	float szNear = 0.1f;
+	float szFar = 100.0f;
+
 	bool useOrthographic = false;
 	float fov = 90.0f;
 	float zNear = 0.1f;
@@ -864,6 +878,8 @@ public:
 		createswfrm();
 		createcomandpoolbuffer();
 		createsync();
+		ubo.lightColor = glm::vec3(0, 0, 0);
+		ubo.lightPos = glm::vec3(0, 0, 0);
 		std::cout << "log: engine initied with success" << std::endl;
 	}
 	bool shouldterminate() {
@@ -1023,6 +1039,9 @@ public:
 	glm::vec3 pos;
 	glm::vec3 rot;
 	glm::vec3 scale;
+	bool enableMeshMatrix = true;
+	bool enablePlayerMatrix = true;
+	bool enableShadowMatrix = true;
 	void create(Engine& eng, std::string vertshader, std::string fragshader, glm::vec3* vertexes, glm::vec2* uv, glm::vec3* normals, int size) {
 		vs = vertshader;
 		fs = fragshader;
@@ -1053,24 +1072,45 @@ public:
 		vkUnmapMemory(eng.device, vertexBufferMemory);
 	}
 	void Draw(Engine& eng) {
-		if (eng.useOrthographic) {
-			eng.ubo.projection = glm::ortho(-eng.fov, eng.fov, -eng.fov / (eng.resolution.x / eng.resolution.y), eng.fov / (eng.resolution.x / eng.resolution.y), eng.zNear, eng.zFar);
+		if (enablePlayerMatrix) {
+			if (eng.useOrthographic) {
+				eng.ubo.projection = glm::ortho(-eng.fov, eng.fov, -eng.fov / (eng.resolution.x / eng.resolution.y), eng.fov / (eng.resolution.x / eng.resolution.y), eng.zNear, eng.zFar);
+			}
+			else {
+				eng.ubo.projection = glm::perspective(eng.fov, (float)eng.resolution.x / eng.resolution.y, eng.zNear, eng.zFar);
+			}
+			eng.ubo.translate = glm::translate(glm::mat4(1.0f), glm::vec3(eng.pos.x, eng.pos.y, eng.pos.z));
+			eng.ubo.rotx = glm::rotate(glm::mat4(1.0f), eng.rot.x, glm::vec3(1, 0, 0));
+			eng.ubo.roty = glm::rotate(glm::mat4(1.0f), eng.rot.y, glm::vec3(0, 1, 0));
 		}
-		else {
-			eng.ubo.projection = glm::perspective(eng.fov, (float)eng.resolution.x / eng.resolution.y, eng.zNear, eng.zFar);
+		if (enableMeshMatrix) {
+			eng.ubo.mtranslate = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x, pos.y, pos.z));
+			eng.ubo.mrotx = glm::rotate(glm::mat4(1.0f), rot.x, glm::vec3(1, 0, 0));
+			eng.ubo.mroty = glm::rotate(glm::mat4(1.0f), rot.y, glm::vec3(0, 1, 0));
+			eng.ubo.mrotz = glm::rotate(glm::mat4(1.0f), rot.z, glm::vec3(0, 0, 1));
+			eng.ubo.mscale = glm::scale(glm::mat4(1.0f), glm::vec3(scale.x, scale.y, scale.z));
 		}
-		eng.ubo.translate = glm::translate(glm::mat4(1.0f), glm::vec3(eng.pos.x, eng.pos.y, eng.pos.z));
-		eng.ubo.rotx = glm::rotate(glm::mat4(1.0f), eng.rot.x, glm::vec3(1, 0, 0));
-		eng.ubo.roty = glm::rotate(glm::mat4(1.0f), eng.rot.y, glm::vec3(0, 1, 0));
+		if (enableShadowMatrix) {
+			if (eng.ShadowOrtho) {
+				eng.ubo.sprojection = glm::ortho(-eng.sFov, eng.sFov, -eng.sFov, eng.sFov, eng.szNear, eng.szFar);
+			}
+			else {
+				eng.ubo.sprojection = glm::perspective(eng.sFov, 1.0f, eng.szNear, eng.szFar);
+			}
+			if (eng.useShadowLookAt) {
+				eng.ubo.stranslate = glm::lookAt(eng.ShadowPos, eng.ShadowLookAt, glm::vec3(0.0, 1.0, 0.0));
+				eng.ubo.useLookAt = 1;
+			}
+			else {
+				eng.ubo.useLookAt = 0;
+				eng.ubo.stranslate = glm::translate(glm::mat4(1.0f), glm::vec3(eng.ShadowPos.x, eng.ShadowPos.y, eng.ShadowPos.z));
+				eng.ubo.srotx = glm::rotate(glm::mat4(1.0f), eng.ShadowRot.x, glm::vec3(1, 0, 0));
+				eng.ubo.sroty = glm::rotate(glm::mat4(1.0f), eng.ShadowRot.y, glm::vec3(0, 1, 0));
+			}
+		}
 
 		eng.ubo.cameraPosition = eng.pos;
 		eng.ubo.resolution = eng.resolution;
-
-		eng.ubo.mtranslate = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x, pos.y, pos.z));
-		eng.ubo.mrotx = glm::rotate(glm::mat4(1.0f), rot.x, glm::vec3(1, 0, 0));
-		eng.ubo.mroty = glm::rotate(glm::mat4(1.0f), rot.y, glm::vec3(0, 1, 0));
-		eng.ubo.mrotz = glm::rotate(glm::mat4(1.0f), rot.z, glm::vec3(0, 0, 1));
-		eng.ubo.mscale = glm::scale(glm::mat4(1.0f), glm::vec3(scale.x, scale.y, scale.z));
 
 		memcpy(uniformBuffersMapped[eng.currentFrame], &eng.ubo, sizeof(eng.ubo));
 
