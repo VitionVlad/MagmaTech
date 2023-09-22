@@ -768,20 +768,17 @@ public:
 		vkAllocateMemory(device, &allocInfo, nullptr, &vertexBufferMemory);
 		vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
 	}
-	void createDescriptorSetLayout(VkDescriptorSetLayout *descriptorSetLayout, size_t size) {
-		std::vector<VkDescriptorSetLayoutBinding> uboLayoutBinding{};
-		uboLayoutBinding.resize(size);
-		for (size_t i = 0; i != size; i++) {
-			uboLayoutBinding[i].binding = i;
-			uboLayoutBinding[i].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			uboLayoutBinding[i].descriptorCount = 1;
-			uboLayoutBinding[i].stageFlags = VK_SHADER_STAGE_ALL;
-		}
+	void createDescriptorSetLayout(VkDescriptorSetLayout& descriptorSetLayout) {
+		VkDescriptorSetLayoutBinding uboLayoutBinding{};
+		uboLayoutBinding.binding = 0;
+		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboLayoutBinding.descriptorCount = 1;
+		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_ALL;
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		layoutInfo.bindingCount = 1;
-		layoutInfo.pBindings = uboLayoutBinding.data();
-		vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, descriptorSetLayout);
+		layoutInfo.pBindings = &uboLayoutBinding;
+		vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout);
 	}
 	void createUniformBuffers(std::vector<VkBuffer>&uniformBuffers, std::vector<VkDeviceMemory>&uniformBuffersMemory, std::vector<void*>&uniformBuffersMapped, VkDescriptorPool & descriptorPool, std::vector<VkDescriptorSet>&descriptorSets, VkDescriptorSetLayout & descriptorSetLayout) {
 		VkDeviceSize bufferSize = sizeof(UniformBufferObject);
@@ -1258,7 +1255,7 @@ public:
 		eng.createImageView(textureImageView, textureImage, imagecount);
 		eng.createImageSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, textureSampler);
 
-		eng.createDescriptorSetLayout(&descriptorSetLayout, 1);
+		eng.createDescriptorSetLayout(descriptorSetLayout);
 		eng.createPipeline(vertshader, fragshader, graphicsPipeline, pipelineLayout, descriptorSetLayout);
 		eng.createvertexbuf(vertexdata.data(), size, vertexBuffer, vertexBufferMemory);
 		eng.createUniformBuffers(uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, descriptorPool, descriptorSets, descriptorSetLayout);
