@@ -12,6 +12,39 @@ public:
 	std::vector<glm::vec3> vertex;
 	std::vector<glm::vec2> uv;
 	std::vector<glm::vec3> normals;
+	std::vector<char> pixels;
+	glm::ivec2 textureResolution = glm::ivec2(0, 0);
+	void loadppm(std::string path) {
+		std::fstream readimage;
+		readimage.open(path);
+		int i1, i2, i3;
+		char c[3];
+		std::string trash;
+		readimage >> trash;
+		readimage >> textureResolution.x >> textureResolution.y;
+		readimage >> i1;
+		pixels.resize(textureResolution.x * textureResolution.y * 4);
+		if (trash == "P3") {
+			for (int i = 0; readimage >> i1 >> i2 >> i3; i += 4) {
+				pixels[i] = i1;
+				pixels[i + 1] = i2;
+				pixels[i + 2] = i3;
+				pixels[i + 3] = 255;
+			}
+		}
+		else {
+			for (int i = 0; i != textureResolution.x * textureResolution.y * 4; i += 4) {
+				readimage.get(c[0]);
+				readimage.get(c[1]);
+				readimage.get(c[2]);
+				pixels[i] = (unsigned char)c[0];
+				pixels[i + 1] = (unsigned char)c[1];
+				pixels[i + 2] = (unsigned char)c[2];
+				pixels[i + 3] = 255;
+			}
+		}
+		readimage.close();
+	}
 	void loadobj(std::string path) {
 		std::vector<glm::vec4> lvertex;
 		std::vector<glm::vec3> lnormals;
