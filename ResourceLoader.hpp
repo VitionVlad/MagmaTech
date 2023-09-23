@@ -12,7 +12,7 @@ public:
 	std::vector<glm::vec3> vertex;
 	std::vector<glm::vec2> uv;
 	std::vector<glm::vec3> normals;
-	std::vector<char> pixels;
+	std::vector<unsigned char> pixels;
 	glm::ivec2 textureResolution = glm::ivec2(0, 0);
 	void loadppm(std::string path) {
 		std::fstream readimage;
