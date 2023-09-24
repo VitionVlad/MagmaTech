@@ -40,7 +40,7 @@ int main(){
 
     std::cout << objtest.textureResolution.x << " " << objtest.textureResolution.y << std::endl;
 
-	test.create(eng, "data/raw/vert.spv", "data/raw/frag.spv", objtest.vertex.data(), objtest.uv.data(), objtest.normals.data(), objtest.vertex.size(), objtest.pixels.data(), objtest.textureResolution, 1);
+	test.create(eng, "data/raw/vert.spv", "data/raw/frag.spv", objtest.vertex.data(), objtest.uv.data(), objtest.normals.data(), objtest.vertex.size(), objtest.pixels.data(), objtest.textureResolution, objtest.imagecount);
 	while (eng.shouldterminate()) {
         glfwSetInputMode(eng.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         glfwGetCursorPos(eng.window, &mousepos.x, &mousepos.y);

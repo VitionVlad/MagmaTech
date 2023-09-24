@@ -14,6 +14,7 @@ public:
 	std::vector<glm::vec3> normals;
 	std::vector<unsigned char> pixels;
 	glm::ivec2 textureResolution = glm::ivec2(0, 0);
+	int imagecount;
 	void loadppm(std::string path) {
 		std::fstream readimage;
 		readimage.open(path);
@@ -23,9 +24,9 @@ public:
 		readimage >> format;
 		readimage >> textureResolution.x >> textureResolution.y;
 		readimage >> i1;
-		pixels.resize(textureResolution.x * textureResolution.y * 4);
+		pixels.resize(textureResolution.x * textureResolution.y * 4 * (imagecount + 1));
 		if (format == "P3") {
-			for (int i = 0; readimage >> i1 >> i2 >> i3; i += 4) {
+			for (int i = textureResolution.x * textureResolution.y * 4 * imagecount; readimage >> i1 >> i2 >> i3; i += 4) {
 				pixels[i] = i1;
 				pixels[i + 1] = i2;
 				pixels[i + 2] = i3;
@@ -34,7 +35,7 @@ public:
 		}
 		else {
 			readimage.get(c);
-			for (int i = 0; i != textureResolution.x * textureResolution.y * 4; i += 4) {
+			for (int i = textureResolution.x * textureResolution.y * 4 * imagecount; i != textureResolution.x * textureResolution.y * 4 * (imagecount + 1); i += 4) {
 				readimage.get(c);
 				pixels[i] = c;
 				readimage.get(c);
@@ -44,6 +45,7 @@ public:
 				pixels[i + 3] = 256;
 			}
 		}
+		imagecount++;
 		readimage.close();
 	}
 	void loadobj(std::string path) {
