@@ -18,29 +18,30 @@ public:
 		std::fstream readimage;
 		readimage.open(path);
 		int i1, i2, i3;
-		char c[3];
-		std::string trash;
-		readimage >> trash;
+		char c;
+		std::string format;
+		readimage >> format;
 		readimage >> textureResolution.x >> textureResolution.y;
 		readimage >> i1;
 		pixels.resize(textureResolution.x * textureResolution.y * 4);
-		if (trash == "P3") {
+		if (format == "P3") {
 			for (int i = 0; readimage >> i1 >> i2 >> i3; i += 4) {
 				pixels[i] = i1;
 				pixels[i + 1] = i2;
 				pixels[i + 2] = i3;
-				pixels[i + 3] = 255;
+				pixels[i + 3] = 256;
 			}
 		}
 		else {
+			readimage.get(c);
 			for (int i = 0; i != textureResolution.x * textureResolution.y * 4; i += 4) {
-				readimage.get(c[0]);
-				readimage.get(c[1]);
-				readimage.get(c[2]);
-				pixels[i] = (unsigned char)c[0];
-				pixels[i + 1] = (unsigned char)c[1];
-				pixels[i + 2] = (unsigned char)c[2];
-				pixels[i + 3] = 255;
+				readimage.get(c);
+				pixels[i] = c;
+				readimage.get(c);
+				pixels[i + 1] = c;
+				readimage.get(c);
+				pixels[i + 2] = c;
+				pixels[i + 3] = 256;
 			}
 		}
 		readimage.close();
