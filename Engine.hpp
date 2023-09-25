@@ -17,6 +17,8 @@
 #include "vulkan/vulkan_android.h"
 #endif
 
+#include "ResourceLoader.hpp"
+
 struct vertex {
 	glm::vec3 position;
 	glm::vec2 uv;
@@ -1309,6 +1311,59 @@ public:
 		void* vdata;
 		vkMapMemory(eng.device, vertexBufferMemory, 0, sizeof(vertexdata[0]) * size, 0, &vdata);
 		memcpy(vdata, vertexdata.data(), sizeof(vertexdata[0]) * size);
+		vkUnmapMemory(eng.device, vertexBufferMemory);
+	}
+	void create(Engine& eng, std::string vertshader, std::string fragshader, std::string modelpath, std::string* texturepaths, int imagecount) {
+		vs = vertshader;
+		fs = fragshader;
+		Loader assets;
+		assets.loadobj(modelpath);
+		vertexdata.resize(assets.vertex.size());
+		totalvertex = assets.vertex.size();
+
+		for (int i = 0; i != assets.vertex.size(); i++) {
+			vertexdata[i].position.x = assets.vertex[i].x;
+			vertexdata[i].position.y = assets.vertex[i].y;
+			vertexdata[i].position.z = assets.vertex[i].z;
+
+			vertexdata[i].uv.x = assets.uv[i].x;
+			vertexdata[i].uv.y = assets.uv[i].y;
+
+			vertexdata[i].normal.x = assets.normals[i].x;
+			vertexdata[i].normal.y = assets.normals[i].y;
+			vertexdata[i].normal.z = assets.normals[i].z;
+		}
+
+		for (size_t i = 0; i != imagecount; i++) {
+			assets.loadppm(texturepaths[i]);
+		}
+
+		VkDeviceSize imageSize = assets.textureResolution.x * assets.textureResolution.y * 4 * imagecount;
+
+		std::cout << "log: imagesize = " << imageSize << std::endl;
+
+		eng.createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+		void* data;
+		vkMapMemory(eng.device, stagingBufferMemory, 0, imageSize, 0, &data);
+		memcpy(data, assets.pixels.data(), static_cast<size_t>(imageSize));
+		vkUnmapMemory(eng.device, stagingBufferMemory);
+
+		eng.createImage(assets.textureResolution.x, assets.textureResolution.y, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory, imagecount);
+
+		transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, eng, imagecount);
+		copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(assets.textureResolution.x), static_cast<uint32_t>(assets.textureResolution.y), eng, imagecount);
+
+		eng.createImageView(textureImageView, textureImage, imagecount);
+		eng.createImageSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, textureSampler);
+
+		createDescriptorSetLayout(eng);
+		eng.createPipeline(vertshader, fragshader, graphicsPipeline, pipelineLayout, &descriptorSetLayout, 1);
+		eng.createvertexbuf(vertexdata.data(), assets.vertex.size(), vertexBuffer, vertexBufferMemory);
+		createUniformBuffers(uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, descriptorPool, descriptorSets, descriptorSetLayout, textureSampler, textureImageView, eng);
+
+		void* vdata;
+		vkMapMemory(eng.device, vertexBufferMemory, 0, sizeof(vertexdata[0]) * assets.vertex.size(), 0, &vdata);
+		memcpy(vdata, vertexdata.data(), sizeof(vertexdata[0]) * assets.vertex.size());
 		vkUnmapMemory(eng.device, vertexBufferMemory);
 	}
 	void Draw(Engine& eng) {

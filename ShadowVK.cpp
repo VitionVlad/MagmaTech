@@ -1,5 +1,4 @@
 ﻿#include <iostream>
-#include "ResourceLoader.hpp"
 #include "Engine.hpp"
 
 Engine eng;
@@ -34,13 +33,9 @@ int main(){
 	eng.init("test");
 	Mesh test;
 
-    Loader objtest;
-    objtest.loadobj("data/m.obj");
-    objtest.loadppm("data/t.ppm");
+    std::string texpaths[2] = { "data/t.ppm" , "data/t.ppm" };
 
-    std::cout << objtest.textureResolution.x << " " << objtest.textureResolution.y << std::endl;
-
-	test.create(eng, "data/raw/vert.spv", "data/raw/frag.spv", objtest.vertex.data(), objtest.uv.data(), objtest.normals.data(), objtest.vertex.size(), objtest.pixels.data(), objtest.textureResolution, objtest.imagecount);
+	test.create(eng, "data/raw/vert.spv", "data/raw/frag.spv", "data/m.obj", texpaths, 2);
 	while (eng.shouldterminate()) {
         glfwSetInputMode(eng.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         glfwGetCursorPos(eng.window, &mousepos.x, &mousepos.y);
