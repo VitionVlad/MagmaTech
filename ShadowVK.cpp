@@ -42,9 +42,12 @@ int main(){
         eng.rot.y = mousepos.x / eng.resolution.x;
         eng.rot.x = -mousepos.y / eng.resolution.y;
         movecallback();
-		eng.beginmainpass();
+		eng.beginRender();
+        eng.beginShadowPass();
+        test.Draw(eng);
+        eng.beginMainPass();
 		test.Draw(eng);
-		eng.endmainpass();
+		eng.endRender();
 	}
 	eng.terminate();
 }
