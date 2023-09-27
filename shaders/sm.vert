@@ -34,6 +34,9 @@ layout(location = 1) out vec2 fuv;
 void main() {
     vec4 vert = ubo.mscale * vec4(positions, 1.0f);
     vert = ubo.mtranslate * ubo.mrotx * ubo.mroty * ubo.mrotz * vert;
-    gl_Position = ubo.projection * ubo.rotx * ubo.roty * ubo.translate * vert;
-    fuv = uv;
+    if(ubo.useLookAt == 1){
+        gl_Position = ubo.sprojection * ubo.stranslate * vert;
+    }else{
+        gl_Position = ubo.sprojection * ubo.srotx * ubo.sroty * ubo.stranslate * vert;
+    }
 }

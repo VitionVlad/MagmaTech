@@ -115,9 +115,9 @@ public:
 			}
 		}
 		fclose(obj);
-		vertex.resize(indices.size() * 3);
-		normals.resize(indices.size() * 3);
-		uv.resize(indices.size() * 3);
+		vertex.resize(indices.size());
+		normals.resize(indices.size());
+		uv.resize(indices.size());
 		for (int i = 0; i != faceline; i++) {
 			vertex[i].x = lvertex[indices[i]].x;
 			vertex[i].y = lvertex[indices[i]].y;

@@ -7,14 +7,14 @@
 #include <vector>
 #include <array>
 
-#if defined(_WIN32) || defined(__linux__)
-#include "GLFW/glfw3.h"
-#elif __ANDROID__
+#if defined(__ANDROID__)
 #include <android/native_activity.h>
 #include "android/native_window.h"
 #include "android/native_window_jni.h"
 #include "android/hardware_buffer_jni.h"
 #include "vulkan/vulkan_android.h"
+#elif defined(_WIN32) || defined(__linux__)
+#include "GLFW/glfw3.h"
 #endif
 
 #include "ResourceLoader.hpp"
@@ -128,15 +128,7 @@ private:
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         createInfo.pApplicationInfo = &appinfo;
 
-#if defined(_WIN32) || defined(__linux__)
-        uint32_t glfwExtensionCount = 0;
-        const char** glfwExtensions;
-
-        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-        createInfo.enabledExtensionCount = glfwExtensionCount;
-        createInfo.ppEnabledExtensionNames = glfwExtensions;
-#elif __ANDROID__
+#if defined(__ANDROID__)
         std::vector<const char*> instance_extensions;
 
         instance_extensions.push_back("VK_KHR_surface");
@@ -144,6 +136,14 @@ private:
 
         createInfo.enabledExtensionCount = instance_extensions.size();
         createInfo.ppEnabledExtensionNames = instance_extensions.data();
+#elif defined(_WIN32) || defined(__linux__)
+        uint32_t glfwExtensionCount = 0;
+        const char** glfwExtensions;
+
+        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+        createInfo.enabledExtensionCount = glfwExtensionCount;
+        createInfo.ppEnabledExtensionNames = glfwExtensions;
 #endif
 
         uint32_t layercont = 0;
@@ -251,16 +251,17 @@ private:
         std::cout << "log: device created" << std::endl;
     }
     VkSurfaceKHR surface{};
-#if defined(_WIN32) || defined(__linux__)
-    void createSurface() {
-        glfwCreateWindowSurface(instance, window, nullptr, &surface);
-    }
-#elif __ANDROID__
+#if defined(__ANDROID__)
     void createSurface(ANativeWindow* window) {
         VkAndroidSurfaceCreateInfoKHR surfaceCreateInfo = {};
         surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
         surfaceCreateInfo.window = window;
         vkCreateAndroidSurfaceKHR(instance, &surfaceCreateInfo, nullptr, &surface);
+    }
+
+#elif defined(_WIN32) || defined(__linux__)
+    void createSurface() {
+        glfwCreateWindowSurface(instance, window, nullptr, &surface);
     }
 #endif
     VkSwapchainKHR swapChain;
@@ -545,6 +546,9 @@ private:
     }
     bool alreadyran = false;
 public:
+    std::string ShadowFragmentPath = "data/raw/smf.spv";
+    std::string ShadowVertexPath = "data/raw/smv.spv";
+
     VkImage ShadowImage;
     VkDeviceMemory ShadowImageMemory;
     VkImageView ShadowImageView;
@@ -580,7 +584,8 @@ public:
     VkQueue presentQueue{};
     VkDevice device{};
     VkRenderPass renderPass{};
-#if defined(_WIN32) || defined(__linux__)
+#if defined(__ANDROID__)
+#elif defined(_WIN32) || defined(__linux__)
     GLFWwindow* window;
 #endif
     glm::ivec2 resolution = glm::ivec2(800, 600);
@@ -931,13 +936,15 @@ public:
         createImageSampler(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, ShadowMapSampler);
         ubo.lightColor = glm::vec3(0, 0, 0);
         ubo.lightPos = glm::vec3(0, 0, 0);
+        ShadowVertexPath = pathprefix + ShadowVertexPath;
+        ShadowFragmentPath = pathprefix + ShadowFragmentPath;
         std::cout << "log: engine initied with success" << std::endl;
     }
     bool shouldterminate() {
-#if defined(_WIN32) || defined(__linux__)
-        return !glfwWindowShouldClose(window);
-#else
+#if defined(__ANDROID__)
         return true;
+#elif defined(_WIN32) || defined(__linux__)
+        return !glfwWindowShouldClose(window);
 #endif
     }
 #ifdef __ANDROID__
@@ -1063,7 +1070,8 @@ public:
         oldres.x = resolution.x;
         oldres.y = resolution.y;
         alreadyran = false;
-#if defined(_WIN32) || defined(__linux__)
+#if defined(__ANDROID__)
+#elif defined(_WIN32) || defined(__linux__)
         glfwPollEvents();
 #endif
     }
@@ -1085,7 +1093,8 @@ public:
         vkDestroySurfaceKHR(instance, surface, nullptr);
         vkDestroyDevice(device, nullptr);
         vkDestroyInstance(instance, nullptr);
-#if defined(_WIN32) || defined(__linux__)
+#if defined(__ANDROID__)
+#elif defined(_WIN32) || defined(__linux__)
         glfwDestroyWindow(window);
         glfwTerminate();
 #endif
@@ -1349,9 +1358,9 @@ private:
 public:
     int totalvertex = 3;
     std::vector <vertex> vertexdata{};
-    glm::vec3 pos;
-    glm::vec3 rot;
-    glm::vec3 scale;
+    glm::vec3 pos = glm::vec3(0, 0, 0);
+    glm::vec3 rot = glm::vec3(0, 0, 0);
+    glm::vec3 scale = glm::vec3(1, 1, 1);
     bool enableMeshMatrix = true;
     bool enablePlayerMatrix = true;
     bool enableShadowMatrix = true;
@@ -1394,7 +1403,7 @@ public:
 
         createDescriptorSetLayout(eng);
         eng.createPipeline(vertshader, fragshader, graphicsPipeline, pipelineLayout, &descriptorSetLayout, 1, false);
-        eng.createPipeline(vertshader, fragshader, graphicsPipelineShadow, pipelineLayout, &descriptorSetLayout, 1, true);
+        eng.createPipeline(eng.ShadowVertexPath, eng.ShadowFragmentPath, graphicsPipelineShadow, pipelineLayout, &descriptorSetLayout, 1, true);
         eng.createvertexbuf(vertexdata.data(), size, vertexBuffer, vertexBufferMemory);
         createUniformBuffers(uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, descriptorPool, descriptorSets, descriptorSetLayout, textureSampler, textureImageView, eng);
 
@@ -1448,7 +1457,7 @@ public:
 
         createDescriptorSetLayout(eng);
         eng.createPipeline(vertshader, fragshader, graphicsPipeline, pipelineLayout, &descriptorSetLayout, 1, false);
-        eng.createPipeline(vertshader, fragshader, graphicsPipelineShadow, pipelineLayout, &descriptorSetLayout, 1, true);
+        eng.createPipeline(eng.ShadowVertexPath, eng.ShadowFragmentPath, graphicsPipelineShadow, pipelineLayout, &descriptorSetLayout, 1, true);
         eng.createvertexbuf(vertexdata.data(), assets.vertex.size(), vertexBuffer, vertexBufferMemory);
         createUniformBuffers(uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, descriptorPool, descriptorSets, descriptorSetLayout, textureSampler, textureImageView, eng);
 
@@ -1503,7 +1512,7 @@ public:
         if (eng.resolution.x != eng.oldres.x || eng.resolution.y != eng.oldres.y) {
             vkDestroyPipeline(eng.device, graphicsPipeline, nullptr);
             eng.createPipeline(vs, fs, graphicsPipeline, pipelineLayout, &descriptorSetLayout, 1, false);
-            eng.createPipeline(vs, fs, graphicsPipelineShadow, pipelineLayout, &descriptorSetLayout, 1, true);
+            eng.createPipeline(eng.ShadowVertexPath, eng.ShadowFragmentPath, graphicsPipelineShadow, pipelineLayout, &descriptorSetLayout, 1, true);
         }
 
         VkBuffer vertexBuffers[] = { vertexBuffer };

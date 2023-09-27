@@ -31,6 +31,11 @@ void movecallback() {
 int main(){
     glm::dvec2 mousepos;
 	eng.init("test");
+    eng.ShadowOrtho = true;
+    eng.sFov = 5;
+    eng.useShadowLookAt = true;
+    eng.ShadowLookAt = glm::vec3(0, 0, 0);
+    eng.ShadowPos = glm::vec3(-10, -10, -10);
 	Mesh test;
 
     std::string texpaths[2] = { "data/t.ppm" , "data/t.ppm" };
@@ -44,9 +49,13 @@ int main(){
         movecallback();
 		eng.beginRender();
         eng.beginShadowPass();
+
         test.Draw(eng);
+
         eng.beginMainPass();
+
 		test.Draw(eng);
+
 		eng.endRender();
 	}
 	eng.terminate();
