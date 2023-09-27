@@ -7,7 +7,7 @@
 #include <vector>
 #include <array>
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
 #include "GLFW/glfw3.h"
 #elif __ANDROID__
 #include <android/native_activity.h>
@@ -128,7 +128,7 @@ private:
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         createInfo.pApplicationInfo = &appinfo;
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
         uint32_t glfwExtensionCount = 0;
         const char** glfwExtensions;
 
@@ -251,7 +251,7 @@ private:
         std::cout << "log: device created" << std::endl;
     }
     VkSurfaceKHR surface{};
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
     void createSurface() {
         glfwCreateWindowSurface(instance, window, nullptr, &surface);
     }
@@ -580,7 +580,7 @@ public:
     VkQueue presentQueue{};
     VkDevice device{};
     VkRenderPass renderPass{};
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
     GLFWwindow* window;
 #endif
     glm::ivec2 resolution = glm::ivec2(800, 600);
@@ -907,7 +907,7 @@ public:
 
         std::string platformname = "UNKNOWN";
 
-#ifdef _WIN32
+#if defined(_WIN32)
         platformname = "WIN32";
 #endif
 
@@ -934,7 +934,7 @@ public:
         std::cout << "log: engine initied with success" << std::endl;
     }
     bool shouldterminate() {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
         return !glfwWindowShouldClose(window);
 #else
         return true;
@@ -1063,7 +1063,7 @@ public:
         oldres.x = resolution.x;
         oldres.y = resolution.y;
         alreadyran = false;
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
         glfwPollEvents();
 #endif
     }
@@ -1085,7 +1085,7 @@ public:
         vkDestroySurfaceKHR(instance, surface, nullptr);
         vkDestroyDevice(device, nullptr);
         vkDestroyInstance(instance, nullptr);
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
         glfwDestroyWindow(window);
         glfwTerminate();
 #endif
