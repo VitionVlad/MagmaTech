@@ -5,6 +5,8 @@ Engine eng;
 
 const float speed = 0.1f;
 
+bool mouseattached = true;
+
 void movecallback() {
     int state = glfwGetKey(eng.window, GLFW_KEY_W);
     if (state == GLFW_PRESS) { //w
@@ -26,11 +28,24 @@ void movecallback() {
         eng.pos.x -= cos(eng.rot.x) * cos(eng.rot.y) * speed;
         eng.pos.z += cos(eng.rot.x) * sin(eng.rot.y) * -speed;
     }
+    state = glfwGetKey(eng.window, GLFW_KEY_ESCAPE);
+    if (state == GLFW_PRESS) { //d
+        if (mouseattached) {
+            glfwSetInputMode(eng.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            mouseattached = false;
+        }
+        else {
+            glfwSetInputMode(eng.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            mouseattached = true;
+        }
+    }
 }
 
 int main(){
     glm::dvec2 mousepos;
+    eng.resolutionscale = 0.5;
 	eng.init("test");
+    glfwSetInputMode(eng.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     eng.ShadowOrtho = true;
     eng.sFov = 5;
     eng.useShadowLookAt = true;
@@ -42,7 +57,6 @@ int main(){
 
 	test.create(eng, "data/raw/vert.spv", "data/raw/frag.spv", "data/m.obj", texpaths, 2);
 	while (eng.shouldterminate()) {
-        glfwSetInputMode(eng.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         glfwGetCursorPos(eng.window, &mousepos.x, &mousepos.y);
         eng.rot.y = mousepos.x / eng.resolution.x;
         eng.rot.x = -mousepos.y / eng.resolution.y;
