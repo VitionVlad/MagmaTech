@@ -97,6 +97,8 @@ private:
     VkDeviceMemory MaindImageMemory;
     VkImageView MaindImageView;
 
+    int writeapiver = 0;
+
     bool cfw = false;
     void createInstance(std::string appname) {
         std::ifstream readcfg{};
@@ -124,11 +126,13 @@ private:
             while (readcfg >> nm >> argument) {
                 if (nm == "vkver") {
                     appinfo.apiVersion = argument;
+                    writeapiver = argument;
                 }
             }
         }
         else {
             writecfg << "vkver " << VK_API_VERSION_1_3 << std::endl;
+            writeapiver = VK_API_VERSION_1_3;
         }
 
 
@@ -179,6 +183,7 @@ private:
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDeviceQueueCreateInfo queueinfo{};
     uint32_t queueFamilyIndex;
+    int choseddevice;
     void getDevice() {
         std::fstream cfgwork{};
         cfgwork.open(pathprefix + "eng/cfg/engine.cfg", std::ios_base::app);
@@ -190,7 +195,7 @@ private:
         }
         std::vector<VkPhysicalDevice> devices(deviceCount);
         vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
-        int choseddevice = deviceCount - 1;
+        choseddevice = deviceCount - 1;
 
         if (!cfw) {
             std::string param;
@@ -776,6 +781,7 @@ public:
     glm::ivec2 resolution = glm::ivec2(800, 600);
     glm::ivec2 oldres = glm::ivec2(800, 600);
     bool uselayer = false;
+    bool fullscreen;
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1085,7 +1091,6 @@ public:
     void init(std::string appname) {
         std::ifstream cfgwork{};
         cfgwork.open(pathprefix + "eng/cfg/engine.cfg");
-        GLFWmonitor* mon = nullptr;
 
         if (!cfw) {
             std::string param;
@@ -1098,7 +1103,7 @@ public:
                     resolution.y = (int)argument;
                 }
                 if (param == "wfull" && (int)argument == 1) {
-                    mon = glfwGetPrimaryMonitor();
+                    fullscreen = (int)argument;
                 }
                 if (param == "shadowres") {
                     ShadowMapResolution = (int)argument;
@@ -1122,7 +1127,12 @@ public:
         std::cout << "log: platform = " << platformname << std::endl;
         glfwInit();
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        window = glfwCreateWindow(resolution.x, resolution.y, (appname + " - " + platformname).c_str(), mon, nullptr);
+        if (fullscreen == true) {
+            window = glfwCreateWindow(resolution.x, resolution.y, (appname + " - " + platformname).c_str(), glfwGetPrimaryMonitor(), nullptr);
+        }
+        else {
+            window = glfwCreateWindow(resolution.x, resolution.y, (appname + " - " + platformname).c_str(), nullptr, nullptr);
+        }
         std::cout << "log: window created" << std::endl;
         createInstance(appname);
         createSurface();
@@ -1309,9 +1319,12 @@ public:
             glfwGetWindowSize(window, &resolution.x, &resolution.y);
 #endif
             std::ofstream cfgwork{};
-            cfgwork.open(pathprefix + "eng/cfg/engine.cfg", std::ios_base::app);
-            cfgwork << "\nwsizex " << resolution.x << std::endl;
+            cfgwork.open(pathprefix + "eng/cfg/engine.cfg", std::ofstream::out | std::ofstream::trunc);
+            cfgwork << "vkver " << writeapiver << std::endl;
+            cfgwork << "vkphysdev " << choseddevice << std::endl;
+            cfgwork << "wsizex " << resolution.x << std::endl;
             cfgwork << "wsizey " << resolution.y << std::endl;
+            cfgwork << "wfull " << fullscreen << std::endl;
             cfgwork << "shadowres " << ShadowMapResolution << std::endl;
             cfgwork << "renderscale " << resolutionscale << std::endl;
 #if !defined(__ANDROID__)
@@ -1882,7 +1895,7 @@ public:
         scissor.extent.height = (int)eng.resolution.y * eng.resolutionscale;
         if (eng.shadowpass) {
             scissor.extent.width = eng.ShadowMapResolution;
-            scissor.extent.height = eng.ShadowMapResolution;
+            scissor.extent.height = eng.ShadowMapResolution; 
         }
         vkCmdSetScissor(eng.commandBuffers[eng.currentFrame], 0, 1, &scissor);
 
