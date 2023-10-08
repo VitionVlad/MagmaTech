@@ -43,7 +43,7 @@ void movecallback() {
 
 int main(){
     glm::dvec2 mousepos;
-    eng.resolutionscale = 0.5;
+    eng.resolutionscale = 1;
 	eng.init("test");
     glfwSetInputMode(eng.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     eng.ShadowOrtho = true;
@@ -54,6 +54,8 @@ int main(){
 	Mesh test;
 
     std::string texpaths[2] = { "data/t.ppm" , "data/t.ppm" };
+    test.scale.y = -1;
+    test.cullmode = VK_CULL_MODE_FRONT_BIT;
 
 	test.create(eng, "data/raw/vert.spv", "data/raw/frag.spv", "data/m.obj", texpaths, 2);
 	while (eng.shouldterminate()) {

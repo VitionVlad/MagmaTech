@@ -742,6 +742,7 @@ public:
     UniformBufferObject ubo{};
 
     int ShadowMapResolution = 4000;
+    int oldShadowMapResolution = 4000;
     glm::vec3 ShadowPos = glm::vec3(0, 0, 0);
     glm::vec3 ShadowLookAt = glm::vec3(0, 0, 0);
     glm::vec2 ShadowRot = glm::vec2(0, 0);
@@ -771,6 +772,7 @@ public:
     GLFWwindow* window;
 #endif
     float resolutionscale = 1.0f;
+    float oldresolutionscale = 1.0f;
     glm::ivec2 resolution = glm::ivec2(800, 600);
     glm::ivec2 oldres = glm::ivec2(800, 600);
     bool uselayer = false;
@@ -1086,16 +1088,24 @@ public:
 
         if (!cfw) {
             std::string param;
-            int argument;
+            float argument;
             while (cfgwork >> param >> argument) {
                 if (param == "wsizex") {
-                    resolution.x = argument;
+                    resolution.x = (int)argument;
                 }
                 if (param == "wsizey") {
-                    resolution.y = argument;
+                    resolution.y = (int)argument;
                 }
-                if (param == "wfull" && argument == 1) {
+                if (param == "wfull" && (int)argument == 1) {
                     mon = glfwGetPrimaryMonitor();
+                }
+                if (param == "shadowres") {
+                    ShadowMapResolution = (int)argument;
+                    oldShadowMapResolution = (int)argument;
+                }
+                if (param == "renderscale") {
+                    resolutionscale = argument;
+                    oldresolutionscale = argument;
                 }
             }
         }
@@ -1293,11 +1303,15 @@ public:
         if (res == VK_ERROR_OUT_OF_DATE_KHR) {
             recreateswap();
         }
-        else if (resolution.x != oldres.x || resolution.y != oldres.y) {
+        else if (resolution.x != oldres.x || resolution.y != oldres.y || ShadowMapResolution != oldShadowMapResolution || resolutionscale != oldresolutionscale) {
+            glfwGetWindowSize(window, &resolution.x, &resolution.y);
             std::ofstream cfgwork{};
             cfgwork.open(pathprefix + "eng/cfg/engine.cfg", std::ios_base::app);
             cfgwork << "\nwsizex " << resolution.x << std::endl;
             cfgwork << "wsizey " << resolution.y << std::endl;
+            cfgwork << "shadowres " << ShadowMapResolution << std::endl;
+            cfgwork << "renderscale " << resolutionscale << std::endl;
+            glfwGetFramebufferSize(window, &resolution.x, &resolution.y);
             recreateswap();
         }
 
@@ -1312,19 +1326,6 @@ public:
 #endif
     }
     void terminate() {
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-            vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
-            vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
-            vkDestroyFence(device, inFlightFences[i], nullptr);
-        }
-        vkDestroyCommandPool(device, commandPool, nullptr);
-        for (auto framebuffer : swapChainFramebuffers) {
-            vkDestroyFramebuffer(device, framebuffer, nullptr);
-        }
-        vkDestroyRenderPass(device, renderPass, nullptr);
-        for (auto imageView : swapChainImageViews) {
-            vkDestroyImageView(device, imageView, nullptr);
-        }
         vkDestroySwapchainKHR(device, swapChain, nullptr);
         vkDestroySurfaceKHR(instance, surface, nullptr);
         vkDestroyDevice(device, nullptr);
@@ -1335,7 +1336,7 @@ public:
         glfwTerminate();
 #endif
     }
-    };
+};
 
 class Mesh {
 private:
@@ -1746,7 +1747,7 @@ public:
 
         memcpy(uniformBuffersMapped[eng.currentFrame], &eng.ubo, sizeof(eng.ubo));
 
-        if (eng.resolution.x != eng.oldres.x || eng.resolution.y != eng.oldres.y) {
+        if (eng.resolution.x != eng.oldres.x || eng.resolution.y != eng.oldres.y || eng.ShadowMapResolution != eng.oldShadowMapResolution || eng.resolutionscale != eng.oldresolutionscale) {
             vkDestroyPipeline(eng.device, graphicsPipeline, nullptr);
             eng.createPipeline(vs, fs, graphicsPipeline, pipelineLayout, &descriptorSetLayout, 1, false, true, cullmode);
             eng.createPipeline(eng.ShadowVertexPath, eng.ShadowFragmentPath, graphicsPipelineShadow, pipelineLayout, &descriptorSetLayout, 1, true, false, cullmode);
@@ -1769,8 +1770,8 @@ public:
         VkViewport viewport{};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
-        viewport.width = static_cast<float>(eng.resolution.x * eng.resolutionscale);
-        viewport.height = static_cast<float>(eng.resolution.y * eng.resolutionscale);
+        viewport.width = static_cast<float>((int)eng.resolution.x * eng.resolutionscale);
+        viewport.height = static_cast<float>((int)eng.resolution.y * eng.resolutionscale);
         if (eng.shadowpass) {
             viewport.width = static_cast<float>(eng.ShadowMapResolution);
             viewport.height = static_cast<float>(eng.ShadowMapResolution);
@@ -1780,8 +1781,8 @@ public:
         vkCmdSetViewport(eng.commandBuffers[eng.currentFrame], 0, 1, &viewport);
         VkRect2D scissor{};
         scissor.offset = { 0, 0 };
-        scissor.extent.width = eng.resolution.x * eng.resolutionscale;
-        scissor.extent.height = eng.resolution.y * eng.resolutionscale;
+        scissor.extent.width = (int)eng.resolution.x * eng.resolutionscale;
+        scissor.extent.height = (int)eng.resolution.y * eng.resolutionscale;
         if (eng.shadowpass) {
             scissor.extent.width = eng.ShadowMapResolution;
             scissor.extent.height = eng.ShadowMapResolution;
