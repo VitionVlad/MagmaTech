@@ -8,34 +8,34 @@ const float speed = 0.1f;
 bool mouseattached = true;
 
 void movecallback() {
-    int state = glfwGetKey(eng.window, GLFW_KEY_W);
+    int state = glfwGetKey(eng.ren.window, GLFW_KEY_W);
     if (state == GLFW_PRESS) { //w
-        eng.pos.z += cos(eng.rot.x) * cos(eng.rot.y) * speed;
-        eng.pos.x += cos(eng.rot.x) * sin(eng.rot.y) * -speed;
+        eng.ren.pos.z += cos(eng.ren.rot.x) * cos(eng.ren.rot.y) * speed;
+        eng.ren.pos.x += cos(eng.ren.rot.x) * sin(eng.ren.rot.y) * -speed;
     }
-    state = glfwGetKey(eng.window, GLFW_KEY_A);
+    state = glfwGetKey(eng.ren.window, GLFW_KEY_A);
     if (state == GLFW_PRESS) { // a
-        eng.pos.x += cos(eng.rot.x) * cos(eng.rot.y) * speed;
-        eng.pos.z -= cos(eng.rot.x) * sin(eng.rot.y) * -speed;
+        eng.ren.pos.x += cos(eng.ren.rot.x) * cos(eng.ren.rot.y) * speed;
+        eng.ren.pos.z -= cos(eng.ren.rot.x) * sin(eng.ren.rot.y) * -speed;
     }
-    state = glfwGetKey(eng.window, GLFW_KEY_S);
+    state = glfwGetKey(eng.ren.window, GLFW_KEY_S);
     if (state == GLFW_PRESS) { // s
-        eng.pos.z -= cos(eng.rot.x) * cos(eng.rot.y) * speed;
-        eng.pos.x -= cos(eng.rot.x) * sin(eng.rot.y) * -speed;
+        eng.ren.pos.z -= cos(eng.ren.rot.x) * cos(eng.ren.rot.y) * speed;
+        eng.ren.pos.x -= cos(eng.ren.rot.x) * sin(eng.ren.rot.y) * -speed;
     }
-    state = glfwGetKey(eng.window, GLFW_KEY_D);
+    state = glfwGetKey(eng.ren.window, GLFW_KEY_D);
     if (state == GLFW_PRESS) { //d
-        eng.pos.x -= cos(eng.rot.x) * cos(eng.rot.y) * speed;
-        eng.pos.z += cos(eng.rot.x) * sin(eng.rot.y) * -speed;
+        eng.ren.pos.x -= cos(eng.ren.rot.x) * cos(eng.ren.rot.y) * speed;
+        eng.ren.pos.z += cos(eng.ren.rot.x) * sin(eng.ren.rot.y) * -speed;
     }
-    state = glfwGetKey(eng.window, GLFW_KEY_ESCAPE);
+    state = glfwGetKey(eng.ren.window, GLFW_KEY_ESCAPE);
     if (state == GLFW_PRESS) { //d
         if (mouseattached) {
-            glfwSetInputMode(eng.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            glfwSetInputMode(eng.ren.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
             mouseattached = false;
         }
         else {
-            glfwSetInputMode(eng.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            glfwSetInputMode(eng.ren.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
             mouseattached = true;
         }
     }
@@ -43,27 +43,25 @@ void movecallback() {
 
 int main(){
     glm::dvec2 mousepos;
-    eng.resolutionscale = 1;
+    eng.ren.resolutionscale = 1;
 	eng.init("test");
-    glfwSetInputMode(eng.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    eng.ShadowOrtho = true;
-    eng.sFov = 5;
-    eng.useShadowLookAt = true;
-    eng.ShadowLookAt = glm::vec3(0, 0, 0);
-    eng.ShadowPos = glm::vec3(-10, -10, -10);
-	Mesh test;
+    glfwSetInputMode(eng.ren.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    eng.ren.ShadowOrtho = true;
+    eng.ren.sFov = 5;
+    eng.ren.useShadowLookAt = true;
+    eng.ren.ShadowLookAt = glm::vec3(0, 0, 0);
+    Object test;
 
     std::string texpaths[2] = { "data/t.ppm" , "data/t.ppm" };
-    test.scale.y = -1;
-    test.cullmode = VK_CULL_MODE_FRONT_BIT;
+    test.mesh.scale.y = -1;
+    test.mesh.cullmode = VK_CULL_MODE_FRONT_BIT;
 
 	test.create(eng, "data/raw/vert.spv", "data/raw/frag.spv", "data/m.obj", texpaths, 2);
-	while (eng.shouldterminate()) {
-        glfwGetCursorPos(eng.window, &mousepos.x, &mousepos.y);
-        eng.rot.y = mousepos.x / eng.resolution.x;
-        eng.rot.x = -mousepos.y / eng.resolution.y;
+	while (eng.ren.shouldterminate()) {
+        glfwGetCursorPos(eng.ren.window, &mousepos.x, &mousepos.y);
+        eng.ren.rot.y = mousepos.x / eng.ren.resolution.x;
+        eng.ren.rot.x = -mousepos.y / eng.ren.resolution.y;
         movecallback();
-		eng.beginRender();
         eng.beginShadowPass();
 
         test.Draw(eng);
