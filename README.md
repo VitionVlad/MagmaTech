@@ -11,3 +11,5 @@ full android support
 an example, sussane is colored, i make black and white on post procesing  
 ![image](https://github.com/VitionVlad/MagmaTech/assets/48290199/0dbc5e82-d350-4dd8-9462-cc4d3006b75f)
 now i render in a half of window resolution(wich size can me modified)
+![Screenshot_20231010-112731](https://github.com/VitionVlad/MagmaTech/assets/48290199/6efc7036-4c16-43c3-9e5b-209111c691db)
+tested on google pixel 5, android 14
