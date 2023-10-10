@@ -347,14 +347,14 @@ private:
     void createshadowimages() {
         createImage(ShadowMapResolution, ShadowMapResolution, 1, surform[choseform].format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, ShadowRenderImage, ShadowRenderImageMemory, 1);
         createImage(ShadowMapResolution, ShadowMapResolution, 1, depthformat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, ShadowImage, ShadowImageMemory, 1);
-        createImageView(ShadowRenderImageView, ShadowRenderImage, 1, 1, surform[choseform].format, VK_IMAGE_ASPECT_COLOR_BIT);
-        createImageView(ShadowImageView, ShadowImage, 1, 1, depthformat, VK_IMAGE_ASPECT_DEPTH_BIT);
+        createImageView(ShadowRenderImageView, ShadowRenderImage, VK_IMAGE_VIEW_TYPE_2D, 1, 1, surform[choseform].format, VK_IMAGE_ASPECT_COLOR_BIT);
+        createImageView(ShadowImageView, ShadowImage, VK_IMAGE_VIEW_TYPE_2D, 1, 1, depthformat, VK_IMAGE_ASPECT_DEPTH_BIT);
     }
     void createmainimages() {
         createImage((int)resolution.x * resolutionscale, (int)resolution.y * resolutionscale, 1, surform[choseform].format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, MainImage, MainImageMemory, 1);
         createImage((int)resolution.x * resolutionscale, (int)resolution.y * resolutionscale, 1, depthformat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, MaindImage, MaindImageMemory, 1);
-        createImageView(MainImageView, MainImage, 1, 1, surform[choseform].format, VK_IMAGE_ASPECT_COLOR_BIT);
-        createImageView(MaindImageView, MaindImage, 1, 1, depthformat, VK_IMAGE_ASPECT_DEPTH_BIT);
+        createImageView(MainImageView, MainImage, VK_IMAGE_VIEW_TYPE_2D, 1, 1, surform[choseform].format, VK_IMAGE_ASPECT_COLOR_BIT);
+        createImageView(MaindImageView, MaindImage, VK_IMAGE_VIEW_TYPE_2D, 1, 1, depthformat, VK_IMAGE_ASPECT_DEPTH_BIT);
     }
     void createrepass() {
         std::vector < VkAttachmentDescription> colorAttachment(2);
@@ -1043,11 +1043,11 @@ public:
 
         vkBindImageMemory(device, image, imageMemory, 0);
     }
-    void createImageView(VkImageView& imageview, VkImage& textureImage, int imagearray, int miplevels, VkFormat format, VkImageAspectFlags aspect) {
+    void createImageView(VkImageView& imageview, VkImage& textureImage, VkImageViewType imageviewtype, int imagearray, int miplevels, VkFormat format, VkImageAspectFlags aspect) {
         VkImageViewCreateInfo viewInfo{};
         viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         viewInfo.image = textureImage;
-        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.viewType = imageviewtype;
         viewInfo.format = format;
         viewInfo.subresourceRange.aspectMask = aspect;
         viewInfo.subresourceRange.baseMipLevel = 0;
@@ -1739,7 +1739,7 @@ public:
 
         generateMipmaps(textureImage, TexResolution.x, TexResolution.y, imagecount, eng);
 
-        eng.createImageView(textureImageView, textureImage, imagecount, mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+        eng.createImageView(textureImageView, textureImage, VK_IMAGE_VIEW_TYPE_2D_ARRAY, imagecount, mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
         eng.createImageSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, textureSampler, mipLevels);
 
         createDescriptorSetLayout(eng);
