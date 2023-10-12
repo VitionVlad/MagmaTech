@@ -351,9 +351,9 @@ private:
         createImageView(ShadowImageView, ShadowImage, VK_IMAGE_VIEW_TYPE_2D, 1, 1, depthformat, VK_IMAGE_ASPECT_DEPTH_BIT);
     }
     void createmainimages() {
-        createImage((int)resolution.x * resolutionscale, (int)resolution.y * resolutionscale, 1, surform[choseform].format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, MainImage, MainImageMemory, 1);
+        createImage((int)resolution.x * resolutionscale, (int)resolution.y * resolutionscale, 1, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, MainImage, MainImageMemory, 1);
         createImage((int)resolution.x * resolutionscale, (int)resolution.y * resolutionscale, 1, depthformat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, MaindImage, MaindImageMemory, 1);
-        createImageView(MainImageView, MainImage, VK_IMAGE_VIEW_TYPE_2D, 1, 1, surform[choseform].format, VK_IMAGE_ASPECT_COLOR_BIT);
+        createImageView(MainImageView, MainImage, VK_IMAGE_VIEW_TYPE_2D, 1, 1, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT);
         createImageView(MaindImageView, MaindImage, VK_IMAGE_VIEW_TYPE_2D, 1, 1, depthformat, VK_IMAGE_ASPECT_DEPTH_BIT);
     }
     void createrepass() {
@@ -395,6 +395,8 @@ private:
         renderPassInfo.pSubpasses = &subpass;
         renderPassInfo.dependencyCount = 0;
         vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
+        colorAttachment[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        vkCreateRenderPass(device, &renderPassInfo, nullptr, &mainPass);
         std::cout << "log: main renderpass created" << std::endl;
     }
     std::vector<VkFramebuffer> swapChainFramebuffers;
@@ -491,7 +493,7 @@ private:
         };
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = renderPass;
+        framebufferInfo.renderPass = mainPass;
         framebufferInfo.attachmentCount = 2;
         framebufferInfo.pAttachments = attachments;
         framebufferInfo.width = (int)resolution.x * resolutionscale;
@@ -545,42 +547,31 @@ private:
         for (size_t i = 0; i < swapChainFramebuffers.size(); i++) {
             vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
         }
-        vkDestroyFramebuffer(device, ShadowFramebuffer, nullptr);
         vkDestroyFramebuffer(device, MainFramebuffer, nullptr);
-
+        
         for (size_t i = 0; i < swapChainImageViews.size(); i++) {
             vkDestroyImageView(device, swapChainImageViews[i], nullptr);
         }
         vkDestroyImageView(device, depthImageView, nullptr);
         vkDestroyImage(device, depthImage, nullptr);
         vkFreeMemory(device, depthImageMemory, nullptr);
-
-        vkDestroyImageView(device, ShadowImageView, nullptr);
-        vkDestroyImage(device, ShadowImage, nullptr);
-        vkFreeMemory(device, ShadowImageMemory, nullptr);
-
-        vkDestroyImageView(device, ShadowRenderImageView, nullptr);
-        vkDestroyImage(device, ShadowRenderImage, nullptr);
-        vkFreeMemory(device, ShadowRenderImageMemory, nullptr);
-
+        
         vkDestroyImageView(device, MainImageView, nullptr);
         vkDestroyImage(device, MainImage, nullptr);
         vkFreeMemory(device, MainImageMemory, nullptr);
-
+        
         vkDestroyImageView(device, MaindImageView, nullptr);
         vkDestroyImage(device, MaindImage, nullptr);
         vkFreeMemory(device, MaindImageMemory, nullptr);
-
+        
         vkDestroyPipeline(device, graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 
         createdepthbuffer();
-        createshadowimages();
         createmainimages();
         vkDestroySwapchainKHR(device, swapChain, nullptr);
         createswapchain();
         createswfrm();
-        createshadowfrm();
         createmainfrm();
         createDescriptorSetLayout();
         createPipeline(PostProcessVertexPath, PostProcessFragmentPath, graphicsPipeline, pipelineLayout, &descriptorSetLayout, 1, false, false, VK_CULL_MODE_NONE);
@@ -736,10 +727,10 @@ public:
     std::string PostProcessFragmentPath = "data/raw/postf.spv";
     std::string PostProcessVertexPath = "data/raw/postv.spv";
 
-    VkImage ShadowImage;
-    VkDeviceMemory ShadowImageMemory;
-    VkImageView ShadowImageView;
-    VkSampler RenderSampler;
+    VkImage ShadowImage{};
+    VkDeviceMemory ShadowImageMemory{};
+    VkImageView ShadowImageView{};
+    VkSampler RenderSampler{};
 
     bool shadowpass = false;
     const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -772,6 +763,7 @@ public:
     VkQueue presentQueue{};
     VkDevice device{};
     VkRenderPass renderPass{};
+    VkRenderPass mainPass{};
 #if defined(__ANDROID__)
 #elif defined(_WIN32) || defined(__linux__)
     GLFWwindow* window;
@@ -974,6 +966,9 @@ public:
         pipelineInfo.pDynamicState = &dynamicState;
         pipelineInfo.layout = pipelineLayout;
         pipelineInfo.renderPass = renderPass;
+        if (useresolutionscale) {
+            pipelineInfo.renderPass = mainPass;
+        }
         pipelineInfo.subpass = 0;
         vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline);
         std::cout << "log: pipeline created" << std::endl;
@@ -1198,7 +1193,7 @@ public:
         }
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = renderPass;
+        renderPassInfo.renderPass = mainPass;
         renderPassInfo.framebuffer = MainFramebuffer;
         renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent.width = (int)(resolution.x * resolutionscale);
@@ -1314,7 +1309,7 @@ public:
         if (res == VK_ERROR_OUT_OF_DATE_KHR) {
             recreateswap();
         }
-        else if (resolution.x != oldres.x || resolution.y != oldres.y || ShadowMapResolution != oldShadowMapResolution || resolutionscale != oldresolutionscale) {
+        else if (resolution.x != oldres.x || resolution.y != oldres.y || resolutionscale != oldresolutionscale) {
 #if !defined(__ANDROID__)
             glfwGetWindowSize(window, &resolution.x, &resolution.y);
 #endif
@@ -1378,6 +1373,10 @@ private:
     VkDeviceMemory textureImageMemory{};
     VkImageView textureImageView{};
     VkSampler textureSampler;
+    VkImage cubeImage{};
+    VkDeviceMemory cubeImageMemory{};
+    VkImageView cubeImageView{};
+    VkSampler cubeSampler;
 
     VkPipelineStageFlags sourceStage{};
     VkPipelineStageFlags destinationStage{};
@@ -1520,7 +1519,14 @@ private:
         shadowLayoutBinding.pImmutableSamplers = nullptr;
         shadowLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-        std::array<VkDescriptorSetLayoutBinding, 3> bindings = { uboLayoutBinding, samplerLayoutBinding, shadowLayoutBinding };
+        VkDescriptorSetLayoutBinding cubeLayoutBinding{};
+        cubeLayoutBinding.binding = 3;
+        cubeLayoutBinding.descriptorCount = 1;
+        cubeLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        cubeLayoutBinding.pImmutableSamplers = nullptr;
+        cubeLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        std::array<VkDescriptorSetLayoutBinding, 4> bindings = { uboLayoutBinding, samplerLayoutBinding, shadowLayoutBinding, cubeLayoutBinding };
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
@@ -1539,13 +1545,15 @@ private:
             vkMapMemory(eng.device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
         }
 
-        std::array<VkDescriptorPoolSize, 3> poolSizes{};
+        std::array<VkDescriptorPoolSize, 4> poolSizes{};
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[0].descriptorCount = static_cast<uint32_t>(eng.MAX_FRAMES_IN_FLIGHT);
         poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         poolSizes[1].descriptorCount = static_cast<uint32_t>(eng.MAX_FRAMES_IN_FLIGHT);
         poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         poolSizes[2].descriptorCount = static_cast<uint32_t>(eng.MAX_FRAMES_IN_FLIGHT);
+        poolSizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizes[3].descriptorCount = static_cast<uint32_t>(eng.MAX_FRAMES_IN_FLIGHT);
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1580,7 +1588,12 @@ private:
             shadowInfo.imageView = eng.ShadowImageView;
             shadowInfo.sampler = eng.RenderSampler;
 
-            std::array<VkWriteDescriptorSet, 3> descriptorWrite;
+            VkDescriptorImageInfo cubeInfo{};
+            cubeInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            cubeInfo.imageView = cubeImageView;
+            cubeInfo.sampler = cubeSampler;
+
+            std::array<VkWriteDescriptorSet, 4> descriptorWrite;
             descriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrite[0].dstSet = descriptorSets[i];
             descriptorWrite[0].dstBinding = 0;
@@ -1607,6 +1620,15 @@ private:
             descriptorWrite[2].descriptorCount = 1;
             descriptorWrite[2].pImageInfo = &shadowInfo;
             descriptorWrite[2].pNext = nullptr;
+
+            descriptorWrite[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite[3].dstSet = descriptorSets[i];
+            descriptorWrite[3].dstBinding = 3;
+            descriptorWrite[3].dstArrayElement = 0;
+            descriptorWrite[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrite[3].descriptorCount = 1;
+            descriptorWrite[3].pImageInfo = &cubeInfo;
+            descriptorWrite[3].pNext = nullptr;
 
             vkUpdateDescriptorSets(eng.device, static_cast<uint32_t>(descriptorWrite.size()), descriptorWrite.data(), 0, nullptr);
         }
@@ -1699,7 +1721,7 @@ public:
     bool enableMeshMatrix = true;
     bool enablePlayerMatrix = true;
     bool enableShadowMatrix = true;
-    void create(Render& eng, std::string vertshader, std::string fragshader, glm::vec3* vertexes, glm::vec2* uv, glm::vec3* normals, int size, unsigned char* pixels, glm::ivec2 TexResolution, int imagecount) {
+    void create(Render& eng, std::string vertshader, std::string fragshader, glm::vec3* vertexes, glm::vec2* uv, glm::vec3* normals, int size, unsigned char* pixels, glm::ivec2 TexResolution, int imagecount, unsigned char* cpixels, glm::ivec2 cubeResolution, int cubecount) {
         vs = vertshader;
         fs = fragshader;
         vertexdata.resize(size);
@@ -1719,28 +1741,32 @@ public:
         }
 
         VkDeviceSize imageSize = TexResolution.x * TexResolution.y * 4 * imagecount;
-
         std::cout << "log: imagesize = " << imageSize << std::endl;
-
         eng.createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
         void* data;
         vkMapMemory(eng.device, stagingBufferMemory, 0, imageSize, 0, &data);
         memcpy(data, pixels, static_cast<size_t>(imageSize));
         vkUnmapMemory(eng.device, stagingBufferMemory);
-
         mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(TexResolution.x, TexResolution.y)))) + 1;
-
         std::cout << "log: " << mipLevels << " miplevels" << std::endl;
-
         eng.createImage(TexResolution.x, TexResolution.y, mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory, imagecount);
-
         transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, eng, imagecount);
         copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(TexResolution.x), static_cast<uint32_t>(TexResolution.y), eng, imagecount);
-
         generateMipmaps(textureImage, TexResolution.x, TexResolution.y, imagecount, eng);
-
         eng.createImageView(textureImageView, textureImage, VK_IMAGE_VIEW_TYPE_2D_ARRAY, imagecount, mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
         eng.createImageSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, textureSampler, mipLevels);
+
+        imageSize = cubeResolution.x * cubeResolution.y * 4 * cubecount * 6;
+        std::cout << "log: cube size = " << imageSize << std::endl;
+        eng.createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+        vkMapMemory(eng.device, stagingBufferMemory, 0, imageSize, 0, &data);
+        memcpy(data, cpixels, static_cast<size_t>(imageSize));
+        vkUnmapMemory(eng.device, stagingBufferMemory);
+        eng.createImage(cubeResolution.x, cubeResolution.y, 1, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, cubeImage, cubeImageMemory, cubecount * 6);
+        transitionImageLayout(cubeImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, eng, cubecount * 6);
+        copyBufferToImage(stagingBuffer, cubeImage, static_cast<uint32_t>(cubeResolution.x), static_cast<uint32_t>(cubeResolution.y), eng, cubecount * 6);
+        eng.createImageView(cubeImageView, cubeImage, VK_IMAGE_VIEW_TYPE_CUBE_ARRAY, cubecount * 6, 1, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+        eng.createImageSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, cubeSampler, 1);
 
         createDescriptorSetLayout(eng);
         eng.createPipeline(vertshader, fragshader, graphicsPipeline, pipelineLayout, &descriptorSetLayout, 1, false, true, cullmode);
@@ -1795,12 +1821,6 @@ public:
         eng.ubo.resolution = eng.resolution;
 
         memcpy(uniformBuffersMapped[eng.currentFrame], &eng.ubo, sizeof(eng.ubo));
-
-        if (eng.resolution.x != eng.oldres.x || eng.resolution.y != eng.oldres.y || eng.ShadowMapResolution != eng.oldShadowMapResolution || eng.resolutionscale != eng.oldresolutionscale) {
-            vkDestroyPipeline(eng.device, graphicsPipeline, nullptr);
-            eng.createPipeline(vs, fs, graphicsPipeline, pipelineLayout, &descriptorSetLayout, 1, false, true, cullmode);
-            eng.createPipeline(eng.ShadowVertexPath, eng.ShadowFragmentPath, graphicsPipelineShadow, pipelineLayout, &descriptorSetLayout, 1, true, false, cullmode);
-        }
 
         VkBuffer vertexBuffers[] = { vertexBuffer };
         VkDeviceSize offsets[] = { 0 };
