@@ -49,6 +49,7 @@ int main(){
     eng.ren.ShadowOrtho = false;
     eng.ren.useShadowLookAt = false;
     eng.ren.ShadowLookAt = glm::vec3(0, 0, 0);
+    eng.ren.pos.z = -2;
     Object test;
 
     std::string texpaths[6] = { "data/t.ppm" , "data/t.ppm", "data/t.ppm" , "data/t.ppm", "data/t.ppm" , "data/t.ppm" };
