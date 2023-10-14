@@ -55,6 +55,7 @@ int main(){
     std::string texpaths[6] = { "data/t.ppm" , "data/t.ppm", "data/t.ppm" , "data/t.ppm", "data/t.ppm" , "data/t.ppm" };
     test.mesh.scale.y = -1;
     test.mesh.cullmode = VK_CULL_MODE_FRONT_BIT;
+    test.mesh.shadowcullmode = VK_CULL_MODE_BACK_BIT;
 
 	test.create(eng, "data/raw/vert.spv", "data/raw/frag.spv", "data/m.obj", texpaths, 2, texpaths, 1);
 	while (eng.ren.shouldterminate()) {

@@ -70,6 +70,9 @@ public:
 		}
 		mesh.create(eng.ren, eng.ren.pathprefix + vertshader, eng.ren.pathprefix + fragshader, assets.vertex.data(), assets.uv.data(), assets.normals.data(), assets.vertex.size(), assets.pixels.data(), assets.textureResolution, imagecount, cube.pixels.data(), cube.textureResolution, cubescount);
 	}
+	void applyChanges(Engine& eng) {
+		mesh.applyChanges(eng.ren);
+	}
 	void Draw(Engine& eng) {
 		mesh.Draw(eng.ren);
 	}

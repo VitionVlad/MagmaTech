@@ -773,6 +773,7 @@ public:
     glm::ivec2 resolution = glm::ivec2(800, 600);
     glm::ivec2 oldres = glm::ivec2(800, 600);
     bool uselayer = false;
+    bool shadowrecreated = false;
     bool fullscreen;
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
         VkBufferCreateInfo bufferInfo{};
@@ -1076,6 +1077,21 @@ public:
         samplerInfo.maxLod = static_cast<float>(mipLevels);
         vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler);
     }
+    void recreateShadowResources() {
+        vkDeviceWaitIdle(device);
+        vkDestroyFramebuffer(device, ShadowFramebuffer, nullptr);
+
+        vkDestroyImageView(device, ShadowRenderImageView, nullptr);
+        vkDestroyImageView(device, ShadowImageView, nullptr);
+        vkDestroyImage(device, ShadowRenderImage, nullptr);
+        vkDestroyImage(device, ShadowImage, nullptr);
+        vkFreeMemory(device, ShadowImageMemory, nullptr);
+        vkFreeMemory(device, ShadowRenderImageMemory, nullptr);
+
+        createshadowimages();
+        createshadowfrm();
+        shadowrecreated = true;
+    }
 #ifdef __ANDROID__
     void init(std::string appname, ANativeWindow* window) {
         resolution.x = ANativeWindow_getWidth(window);
@@ -1170,6 +1186,21 @@ public:
     void beginRender() {
         glfwGetFramebufferSize(window, &resolution.x, &resolution.y);
 #endif
+
+        if (ShadowMapResolution != oldShadowMapResolution) {
+            std::ofstream cfgwork{};
+            cfgwork.open(pathprefix + "eng/cfg/Render.cfg", std::ofstream::out | std::ofstream::trunc);
+            cfgwork << "vkver " << writeapiver << std::endl;
+            cfgwork << "vkphysdev " << choseddevice << std::endl;
+            cfgwork << "wsizex " << resolution.x << std::endl;
+            cfgwork << "wsizey " << resolution.y << std::endl;
+            cfgwork << "wfull " << fullscreen << std::endl;
+            cfgwork << "shadowres " << ShadowMapResolution << std::endl;
+            cfgwork << "renderscale " << resolutionscale << std::endl;
+            cfgwork.close();
+            recreateShadowResources();
+        }
+
         vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
         vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
@@ -1322,6 +1353,7 @@ public:
             cfgwork << "wfull " << fullscreen << std::endl;
             cfgwork << "shadowres " << ShadowMapResolution << std::endl;
             cfgwork << "renderscale " << resolutionscale << std::endl;
+            cfgwork.close();
 #if !defined(__ANDROID__)
             glfwGetFramebufferSize(window, &resolution.x, &resolution.y);
 #endif
@@ -1332,7 +1364,10 @@ public:
 
         oldres.x = resolution.x;
         oldres.y = resolution.y;
+        oldresolutionscale = resolutionscale;
+        oldShadowMapResolution = ShadowMapResolution;
         alreadyran = false;
+        shadowrecreated = false;
 #if defined(__ANDROID__)
 #elif defined(_WIN32) || defined(__linux__)
         glfwPollEvents();
@@ -1380,6 +1415,8 @@ private:
 
     VkPipelineStageFlags sourceStage{};
     VkPipelineStageFlags destinationStage{};
+
+    void* vdata;
 
     VkCommandBuffer beginSingleTimeCommands(Render& eng) {
         VkCommandBufferAllocateInfo allocInfo{};
@@ -1713,6 +1750,7 @@ private:
     }
 public:
     VkCullModeFlagBits cullmode = VK_CULL_MODE_BACK_BIT;
+    VkCullModeFlagBits shadowcullmode = VK_CULL_MODE_FRONT_BIT;
     int totalvertex = 3;
     std::vector <vertex> vertexdata{};
     glm::vec3 pos = glm::vec3(0, 0, 0);
@@ -1770,16 +1808,21 @@ public:
 
         createDescriptorSetLayout(eng);
         eng.createPipeline(vertshader, fragshader, graphicsPipeline, pipelineLayout, &descriptorSetLayout, 1, false, true, cullmode);
-        eng.createPipeline(eng.ShadowVertexPath, eng.ShadowFragmentPath, graphicsPipelineShadow, pipelineLayout, &descriptorSetLayout, 1, true, false, cullmode);
+        eng.createPipeline(eng.ShadowVertexPath, eng.ShadowFragmentPath, graphicsPipelineShadow, pipelineLayout, &descriptorSetLayout, 1, true, false, shadowcullmode);
         eng.createvertexbuf(vertexdata.data(), size, vertexBuffer, vertexBufferMemory);
         createUniformBuffers(uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, descriptorPool, descriptorSets, descriptorSetLayout, textureSampler, textureImageView, eng);
 
-        void* vdata;
         vkMapMemory(eng.device, vertexBufferMemory, 0, sizeof(vertexdata[0]) * size, 0, &vdata);
         memcpy(vdata, vertexdata.data(), sizeof(vertexdata[0]) * size);
-        vkUnmapMemory(eng.device, vertexBufferMemory);
+    }
+    void applyChanges(Render& eng) {
+        eng.createPipeline(vs, fs, graphicsPipeline, pipelineLayout, &descriptorSetLayout, 1, false, true, cullmode);
+        eng.createPipeline(eng.ShadowVertexPath, eng.ShadowFragmentPath, graphicsPipelineShadow, pipelineLayout, &descriptorSetLayout, 1, true, false, shadowcullmode);
     }
     void Draw(Render& eng) {
+        if (eng.shadowrecreated == true) {
+            createUniformBuffers(uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, descriptorPool, descriptorSets, descriptorSetLayout, textureSampler, textureImageView, eng);
+        }
         if (enablePlayerMatrix) {
             if (eng.useOrthographic) {
                 eng.ubo.projection = glm::ortho(-eng.fov, eng.fov, -eng.fov / (eng.resolution.x / eng.resolution.y), eng.fov / (eng.resolution.x / eng.resolution.y), eng.zNear, eng.zFar);
@@ -1821,6 +1864,7 @@ public:
         eng.ubo.resolution = eng.resolution;
 
         memcpy(uniformBuffersMapped[eng.currentFrame], &eng.ubo, sizeof(eng.ubo));
+        memcpy(vdata, vertexdata.data(), sizeof(vertexdata[0]) * totalvertex);
 
         VkBuffer vertexBuffers[] = { vertexBuffer };
         VkDeviceSize offsets[] = { 0 };
