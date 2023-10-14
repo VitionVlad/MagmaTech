@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <thread>
 
 #if defined(__ANDROID__)
 #include <android/native_activity.h>
@@ -23,6 +24,7 @@ struct vertex {
     glm::vec3 position;
     glm::vec2 uv;
     glm::vec3 normal;
+    glm::vec3 tangent;
 
     static VkVertexInputBindingDescription getBindingDescription() {
         VkVertexInputBindingDescription bindingDescription{};
@@ -34,8 +36,8 @@ struct vertex {
         return bindingDescription;
     }
 
-    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
+    static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
 
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
@@ -51,6 +53,11 @@ struct vertex {
         attributeDescriptions[2].location = 2;
         attributeDescriptions[2].format = VK_FORMAT_R32G32B32_SFLOAT;
         attributeDescriptions[2].offset = offsetof(vertex, normal);
+
+        attributeDescriptions[3].binding = 0;
+        attributeDescriptions[3].location = 3;
+        attributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[3].offset = offsetof(vertex, tangent);
 
         return attributeDescriptions;
     }
@@ -1748,6 +1755,44 @@ private:
 
         endSingleTimeCommands(commandBuffer, eng);
     }
+    void matoper(Render& eng) {
+        if (enablePlayerMatrix) {
+            if (eng.useOrthographic) {
+                eng.ubo.projection = glm::ortho(-eng.fov, eng.fov, -eng.fov / (eng.resolution.x / eng.resolution.y), eng.fov / (eng.resolution.x / eng.resolution.y), eng.zNear, eng.zFar);
+            }
+            else {
+                eng.ubo.projection = glm::perspective(eng.fov, (float)eng.resolution.x / eng.resolution.y, eng.zNear, eng.zFar);
+            }
+            eng.ubo.translate = glm::translate(glm::mat4(1.0f), glm::vec3(eng.pos.x, eng.pos.y, eng.pos.z));
+            eng.ubo.rotx = glm::rotate(glm::mat4(1.0f), eng.rot.x, glm::vec3(1, 0, 0));
+            eng.ubo.roty = glm::rotate(glm::mat4(1.0f), eng.rot.y, glm::vec3(0, 1, 0));
+        }
+        if (enableMeshMatrix) {
+            eng.ubo.mtranslate = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x, pos.y, pos.z));
+            eng.ubo.mrotx = glm::rotate(glm::mat4(1.0f), rot.x, glm::vec3(1, 0, 0));
+            eng.ubo.mroty = glm::rotate(glm::mat4(1.0f), rot.y, glm::vec3(0, 1, 0));
+            eng.ubo.mrotz = glm::rotate(glm::mat4(1.0f), rot.z, glm::vec3(0, 0, 1));
+            eng.ubo.mscale = glm::scale(glm::mat4(1.0f), glm::vec3(scale.x, scale.y, scale.z));
+        }
+        if (enableShadowMatrix) {
+            if (eng.ShadowOrtho) {
+                eng.ubo.sprojection = glm::ortho(-eng.sFov, eng.sFov, -eng.sFov, eng.sFov, eng.szNear, eng.szFar);
+            }
+            else {
+                eng.ubo.sprojection = glm::perspective(eng.sFov, 1.0f, eng.szNear, eng.szFar);
+            }
+            if (eng.useShadowLookAt) {
+                eng.ubo.stranslate = glm::lookAt(eng.ShadowPos, eng.ShadowLookAt, glm::vec3(0.0, 1.0, 0.0));
+                eng.ubo.useLookAt = 1;
+            }
+            else {
+                eng.ubo.useLookAt = 0;
+                eng.ubo.stranslate = glm::translate(glm::mat4(1.0f), glm::vec3(eng.ShadowPos.x, eng.ShadowPos.y, eng.ShadowPos.z));
+                eng.ubo.srotx = glm::rotate(glm::mat4(1.0f), eng.ShadowRot.x, glm::vec3(1, 0, 0));
+                eng.ubo.sroty = glm::rotate(glm::mat4(1.0f), eng.ShadowRot.y, glm::vec3(0, 1, 0));
+            }
+        }
+    }
 public:
     VkCullModeFlagBits cullmode = VK_CULL_MODE_BACK_BIT;
     VkCullModeFlagBits shadowcullmode = VK_CULL_MODE_FRONT_BIT;
@@ -1776,6 +1821,35 @@ public:
             vertexdata[i].normal.x = normals[i].x;
             vertexdata[i].normal.y = normals[i].y;
             vertexdata[i].normal.z = normals[i].z;
+        }
+        for (int i = 0; i != totalvertex; i += 3) {
+            glm::vec3 v0 = vertexdata[i].position;
+            glm::vec3 v1 = vertexdata[i+1].position;
+            glm::vec3 v2 = vertexdata[i+2].position;
+
+            glm::vec2 uv0 = glm::vec2(vertexdata[i].uv.x, -vertexdata[i].uv.y);
+            glm::vec2 uv1 = glm::vec2(vertexdata[i+1].uv.x, -vertexdata[i+1].uv.y);
+            glm::vec2 uv2 = glm::vec2(vertexdata[i+2].uv.x, -vertexdata[i+2].uv.y);
+
+            glm::vec3 deltapos1 = glm::vec3(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
+            glm::vec3 deltapos2 = glm::vec3(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
+
+            glm::vec2 deltaUV1 = glm::vec2(uv1.x - uv0.x, uv1.y - uv0.y);
+            glm::vec2 deltaUV2 = glm::vec2(uv2.x - uv0.x, uv2.y - uv0.y);
+
+            float r = 1.0 / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+
+            vertexdata[i].tangent.x = (deltapos1.x * deltaUV2.y - deltapos2.x * deltaUV1.y) * r;
+            vertexdata[i].tangent.y = (deltapos1.y * deltaUV2.y - deltapos2.y * deltaUV1.y) * r;
+            vertexdata[i].tangent.z = (deltapos1.z * deltaUV2.y - deltapos2.z * deltaUV1.y) * r;
+
+            vertexdata[i+1].tangent.y = (deltapos1.y * deltaUV2.y - deltapos2.y * deltaUV1.y) * r;
+            vertexdata[i+1].tangent.z = (deltapos1.z * deltaUV2.y - deltapos2.z * deltaUV1.y) * r;
+            vertexdata[i+1].tangent.x = (deltapos1.x * deltaUV2.y - deltapos2.x * deltaUV1.y) * r;
+
+            vertexdata[i+2].tangent.x = (deltapos1.x * deltaUV2.y - deltapos2.x * deltaUV1.y) * r;
+            vertexdata[i+2].tangent.y = (deltapos1.y * deltaUV2.y - deltapos2.y * deltaUV1.y) * r;
+            vertexdata[i+2].tangent.z = (deltapos1.z * deltaUV2.y - deltapos2.z * deltaUV1.y) * r;
         }
 
         VkDeviceSize imageSize = TexResolution.x * TexResolution.y * 4 * imagecount;
@@ -1823,42 +1897,7 @@ public:
         if (eng.shadowrecreated == true) {
             createUniformBuffers(uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, descriptorPool, descriptorSets, descriptorSetLayout, textureSampler, textureImageView, eng);
         }
-        if (enablePlayerMatrix) {
-            if (eng.useOrthographic) {
-                eng.ubo.projection = glm::ortho(-eng.fov, eng.fov, -eng.fov / (eng.resolution.x / eng.resolution.y), eng.fov / (eng.resolution.x / eng.resolution.y), eng.zNear, eng.zFar);
-            }
-            else {
-                eng.ubo.projection = glm::perspective(eng.fov, (float)eng.resolution.x / eng.resolution.y, eng.zNear, eng.zFar);
-            }
-            eng.ubo.translate = glm::translate(glm::mat4(1.0f), glm::vec3(eng.pos.x, eng.pos.y, eng.pos.z));
-            eng.ubo.rotx = glm::rotate(glm::mat4(1.0f), eng.rot.x, glm::vec3(1, 0, 0));
-            eng.ubo.roty = glm::rotate(glm::mat4(1.0f), eng.rot.y, glm::vec3(0, 1, 0));
-        }
-        if (enableMeshMatrix) {
-            eng.ubo.mtranslate = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x, pos.y, pos.z));
-            eng.ubo.mrotx = glm::rotate(glm::mat4(1.0f), rot.x, glm::vec3(1, 0, 0));
-            eng.ubo.mroty = glm::rotate(glm::mat4(1.0f), rot.y, glm::vec3(0, 1, 0));
-            eng.ubo.mrotz = glm::rotate(glm::mat4(1.0f), rot.z, glm::vec3(0, 0, 1));
-            eng.ubo.mscale = glm::scale(glm::mat4(1.0f), glm::vec3(scale.x, scale.y, scale.z));
-        }
-        if (enableShadowMatrix) {
-            if (eng.ShadowOrtho) {
-                eng.ubo.sprojection = glm::ortho(-eng.sFov, eng.sFov, -eng.sFov, eng.sFov, eng.szNear, eng.szFar);
-            }
-            else {
-                eng.ubo.sprojection = glm::perspective(eng.sFov, 1.0f, eng.szNear, eng.szFar);
-            }
-            if (eng.useShadowLookAt) {
-                eng.ubo.stranslate = glm::lookAt(eng.ShadowPos, eng.ShadowLookAt, glm::vec3(0.0, 1.0, 0.0));
-                eng.ubo.useLookAt = 1;
-            }
-            else {
-                eng.ubo.useLookAt = 0;
-                eng.ubo.stranslate = glm::translate(glm::mat4(1.0f), glm::vec3(eng.ShadowPos.x, eng.ShadowPos.y, eng.ShadowPos.z));
-                eng.ubo.srotx = glm::rotate(glm::mat4(1.0f), eng.ShadowRot.x, glm::vec3(1, 0, 0));
-                eng.ubo.sroty = glm::rotate(glm::mat4(1.0f), eng.ShadowRot.y, glm::vec3(0, 1, 0));
-            }
-        }
+        matoper(eng);
 
         eng.ubo.cameraPosition = eng.pos;
         eng.ubo.resolution = eng.resolution;
