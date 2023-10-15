@@ -28,6 +28,13 @@ void movecallback() {
         eng.ren.pos.x -= cos(eng.ren.rot.x) * cos(eng.ren.rot.y) * speed;
         eng.ren.pos.z += cos(eng.ren.rot.x) * sin(eng.ren.rot.y) * -speed;
     }
+    state = glfwGetKey(eng.ren.window, GLFW_KEY_Q);
+    if (state == GLFW_PRESS) { //d
+        eng.ren.ubo.lightColor[0] = glm::vec4(1.0f, 1.0f, 1.0f, 0);
+        eng.ren.ubo.lightPos[0] = glm::vec4(-eng.ren.pos.x, 4, -eng.ren.pos.z, 0);
+        eng.ren.ShadowPos = eng.ren.pos;
+        eng.ren.ShadowRot = eng.ren.rot;
+    }
     state = glfwGetKey(eng.ren.window, GLFW_KEY_ESCAPE);
     if (state == GLFW_PRESS) { //d
         if (mouseattached) {
@@ -51,6 +58,7 @@ int main(){
     eng.ren.ShadowLookAt = glm::vec3(0, 0, 0);
     eng.ren.pos.z = -2;
     eng.ren.pos.y = 4;
+    eng.ren.ubo.lightColor[0] = glm::vec4(1.0f, 1.0f, 1.0f, 0);
     Object test;
 
     std::string texpaths[6] = { "data/t.ppm" , "data/spec.ppm", "data/normal.ppm" , "data/t.ppm", "data/t.ppm" , "data/t.ppm" };
@@ -65,10 +73,6 @@ int main(){
         eng.ren.rot.x = -mousepos.y / eng.ren.resolution.y;
         movecallback();
         eng.ren.sFov = eng.ren.fov;
-        eng.ren.ShadowPos = eng.ren.pos;
-        eng.ren.ShadowRot = eng.ren.rot;
-        eng.ren.ubo.lightColor[0] = glm::vec4(1.0f, 1.0f, 1.0f, 0);
-        eng.ren.ubo.lightPos[0] = glm::vec4(-eng.ren.pos.x, 4, -eng.ren.pos.z, 0);
         eng.beginShadowPass();
 
         test.Draw(eng);

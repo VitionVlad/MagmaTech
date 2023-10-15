@@ -3,9 +3,9 @@
 layout(location = 0) out vec4 outColor;
 
 layout(set = 0, binding = 0) uniform UniformBufferObject {
-    int useLookAt;
-    vec2 resolution;
-    vec3 cameraPosition;
+    vec4 useLookAt;
+    vec4 resolution;
+    vec4 cameraPosition;
 
     mat4 projection;
     mat4 translate;
@@ -53,7 +53,13 @@ void main() {
 
         float diff = max(dot(norm, lightDir), 0.0);
 
-        color += (diff + ambient)*albedo*ubo.lightColor[i].rgb;
+        vec3 viewDir = normalize(vec3(-ubo.cameraPosition.x, ubo.cameraPosition.y, -ubo.cameraPosition.z) - pos);
+        vec3 reflectDir = reflect(-lightDir, norm); 
+
+        float spec = pow(max(dot(viewDir, reflectDir), 0.0), 8);
+        vec3 specular = roughness * spec * ubo.lightColor[i].rgb;  
+
+        color += (diff + specular + ambient)*albedo*ubo.lightColor[i].rgb;
     }
 
     outColor = vec4(color, 1.0);

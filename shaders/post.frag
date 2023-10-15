@@ -3,9 +3,9 @@
 layout(location = 0) out vec4 outColor;
 
 layout(set = 0, binding = 0) uniform UniformBufferObject {
-    int useLookAt;
-    vec2 resolution;
-    vec3 cameraPosition;
+    vec4 useLookAt;
+    vec4 resolution;
+    vec4 cameraPosition;
 
     mat4 projection;
     mat4 translate;

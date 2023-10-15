@@ -6,9 +6,9 @@ layout(location = 2) in vec3 normal;
 layout(location = 3) in vec3 tangent;
 
 layout(set = 0, binding = 0) uniform UniformBufferObject {
-    int useLookAt;
-    vec2 resolution;
-    vec3 cameraPosition;
+    vec4 useLookAt;
+    vec4 resolution;
+    vec4 cameraPosition;
 
     mat4 projection;
     mat4 translate;
@@ -44,7 +44,7 @@ void main() {
     vert = ubo.mtranslate * ubo.mrotx * ubo.mroty * ubo.mrotz * vert;
     gl_Position = ubo.projection * ubo.rotx * ubo.roty * ubo.translate * vert;
     fuv = vec2(uv.x, -uv.y);
-    pos = positions;
+    pos = vert.xyz;
     normals = normal;
     mat3 vTBN = transpose(mat3(
         normalize(tangent),

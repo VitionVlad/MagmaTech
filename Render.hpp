@@ -64,9 +64,9 @@ struct vertex {
 };
 
 struct UniformBufferObject {
-    int useLookAt = 0;
-    glm::vec2 resolution;
-    glm::vec3 cameraPosition;
+    alignas(16) glm::vec4 useLookAt;
+    alignas(16) glm::vec4 resolution;
+    alignas(16) glm::vec4 cameraPosition;
     alignas(16) glm::mat4 projection;
     alignas(16) glm::mat4 translate;
     alignas(16) glm::mat4 rotx;
@@ -1785,10 +1785,10 @@ private:
             }
             if (eng.useShadowLookAt) {
                 eng.ubo.stranslate = glm::lookAt(eng.ShadowPos, eng.ShadowLookAt, glm::vec3(0.0, 1.0, 0.0));
-                eng.ubo.useLookAt = 1;
+                eng.ubo.useLookAt.x = 1;
             }
             else {
-                eng.ubo.useLookAt = 0;
+                eng.ubo.useLookAt.x = 0;
                 eng.ubo.stranslate = glm::translate(glm::mat4(1.0f), glm::vec3(eng.ShadowPos.x, eng.ShadowPos.y, eng.ShadowPos.z));
                 eng.ubo.srotx = glm::rotate(glm::mat4(1.0f), eng.ShadowRot.x, glm::vec3(1, 0, 0));
                 eng.ubo.sroty = glm::rotate(glm::mat4(1.0f), eng.ShadowRot.y, glm::vec3(0, 1, 0));
@@ -1901,6 +1901,10 @@ public:
         }
         matoper(eng);
 
+        eng.ubo.cameraPosition.x = eng.pos.x;
+        eng.ubo.cameraPosition.y = eng.pos.y;
+        eng.ubo.cameraPosition.z = eng.pos.z;
+        eng.ubo.cameraPosition.w = 0;
         eng.ubo.resolution.x = (int)eng.resolution.x * eng.resolutionscale;
         eng.ubo.resolution.y = (int)eng.resolution.y * eng.resolutionscale;
 
