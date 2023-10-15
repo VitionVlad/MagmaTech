@@ -23,8 +23,8 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     mat4 srotx;
     mat4 sroty;
 
-    vec3 lightPos;
-    vec3 lightColor;
+    vec3 lightPos[10];
+    vec3 lightColor[10];
 } ubo;
 
 layout(set = 0, binding = 1) uniform sampler2D ColorMap;
@@ -34,5 +34,5 @@ layout(set = 0, binding = 2) uniform sampler2D DepthMap;
 layout(location = 1) in vec2 uv;
 
 void main() {
-    outColor = vec4(vec3(texture(ColorMap, uv).r), 1.0);
+    outColor = vec4(texture(ColorMap, uv).rgb, 1.0);
 }

@@ -1,6 +1,9 @@
 #include <iostream>
 #include <fstream>
 #include "vulkan/vulkan.h"
+#define GLM_FORCE_RADIANS
+//warning, on adnroid GLM_FORCE_DEFAULT_ALIGNED_GENTYPES may not work, modify iy by yourself in order to work
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include <string>
@@ -67,23 +70,23 @@ struct UniformBufferObject {
     int useLookAt = 0;
     glm::vec2 resolution;
     glm::vec3 cameraPosition;
-    alignas(16) glm::mat4 projection;
-    alignas(16) glm::mat4 translate;
-    alignas(16) glm::mat4 rotx;
-    alignas(16) glm::mat4 roty;
+    glm::mat4 projection;
+    glm::mat4 translate;
+    glm::mat4 rotx;
+    glm::mat4 roty;
 
-    alignas(16) glm::mat4 mtranslate;
-    alignas(16) glm::mat4 mroty;
-    alignas(16) glm::mat4 mrotx;
-    alignas(16) glm::mat4 mrotz;
-    alignas(16) glm::mat4 mscale;
+    glm::mat4 mtranslate;
+    glm::mat4 mroty;
+    glm::mat4 mrotx;
+    glm::mat4 mrotz;
+    glm::mat4 mscale;
 
-    alignas(16) glm::mat4 sprojection;
-    alignas(16) glm::mat4 stranslate;
-    alignas(16) glm::mat4 srotx;
-    alignas(16) glm::mat4 sroty;
-    glm::vec3 lightPos;
-    glm::vec3 lightColor;
+    glm::mat4 sprojection;
+    glm::mat4 stranslate;
+    glm::mat4 srotx;
+    glm::mat4 sroty;
+    glm::vec3 lightPos[10];
+    glm::vec3 lightColor[10];
 };
 
 class Render {
@@ -555,22 +558,22 @@ private:
             vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
         }
         vkDestroyFramebuffer(device, MainFramebuffer, nullptr);
-        
+
         for (size_t i = 0; i < swapChainImageViews.size(); i++) {
             vkDestroyImageView(device, swapChainImageViews[i], nullptr);
         }
         vkDestroyImageView(device, depthImageView, nullptr);
         vkDestroyImage(device, depthImage, nullptr);
         vkFreeMemory(device, depthImageMemory, nullptr);
-        
+
         vkDestroyImageView(device, MainImageView, nullptr);
         vkDestroyImage(device, MainImage, nullptr);
         vkFreeMemory(device, MainImageMemory, nullptr);
-        
+
         vkDestroyImageView(device, MaindImageView, nullptr);
         vkDestroyImage(device, MaindImage, nullptr);
         vkFreeMemory(device, MaindImageMemory, nullptr);
-        
+
         vkDestroyPipeline(device, graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 
@@ -1167,8 +1170,10 @@ public:
         createcomandpoolbuffer();
         createsync();
         createImageSampler(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, RenderSampler, 1);
-        ubo.lightColor = glm::vec3(0, 0, 0);
-        ubo.lightPos = glm::vec3(0, 0, 0);
+        for (int i = 0; i != 10; i++) {
+            ubo.lightColor[i] = glm::vec3(0, 0, 0);
+            ubo.lightPos[i] = glm::vec3(0, 0, 0);
+        }
         ShadowVertexPath = pathprefix + ShadowVertexPath;
         ShadowFragmentPath = pathprefix + ShadowFragmentPath;
         PostProcessVertexPath = pathprefix + PostProcessVertexPath;
@@ -1824,12 +1829,12 @@ public:
         }
         for (int i = 0; i != totalvertex; i += 3) {
             glm::vec3 v0 = vertexdata[i].position;
-            glm::vec3 v1 = vertexdata[i+1].position;
-            glm::vec3 v2 = vertexdata[i+2].position;
+            glm::vec3 v1 = vertexdata[i + 1].position;
+            glm::vec3 v2 = vertexdata[i + 2].position;
 
             glm::vec2 uv0 = glm::vec2(vertexdata[i].uv.x, -vertexdata[i].uv.y);
-            glm::vec2 uv1 = glm::vec2(vertexdata[i+1].uv.x, -vertexdata[i+1].uv.y);
-            glm::vec2 uv2 = glm::vec2(vertexdata[i+2].uv.x, -vertexdata[i+2].uv.y);
+            glm::vec2 uv1 = glm::vec2(vertexdata[i + 1].uv.x, -vertexdata[i + 1].uv.y);
+            glm::vec2 uv2 = glm::vec2(vertexdata[i + 2].uv.x, -vertexdata[i + 2].uv.y);
 
             glm::vec3 deltapos1 = glm::vec3(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
             glm::vec3 deltapos2 = glm::vec3(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
@@ -1843,13 +1848,13 @@ public:
             vertexdata[i].tangent.y = (deltapos1.y * deltaUV2.y - deltapos2.y * deltaUV1.y) * r;
             vertexdata[i].tangent.z = (deltapos1.z * deltaUV2.y - deltapos2.z * deltaUV1.y) * r;
 
-            vertexdata[i+1].tangent.y = (deltapos1.y * deltaUV2.y - deltapos2.y * deltaUV1.y) * r;
-            vertexdata[i+1].tangent.z = (deltapos1.z * deltaUV2.y - deltapos2.z * deltaUV1.y) * r;
-            vertexdata[i+1].tangent.x = (deltapos1.x * deltaUV2.y - deltapos2.x * deltaUV1.y) * r;
+            vertexdata[i + 1].tangent.y = (deltapos1.y * deltaUV2.y - deltapos2.y * deltaUV1.y) * r;
+            vertexdata[i + 1].tangent.z = (deltapos1.z * deltaUV2.y - deltapos2.z * deltaUV1.y) * r;
+            vertexdata[i + 1].tangent.x = (deltapos1.x * deltaUV2.y - deltapos2.x * deltaUV1.y) * r;
 
-            vertexdata[i+2].tangent.x = (deltapos1.x * deltaUV2.y - deltapos2.x * deltaUV1.y) * r;
-            vertexdata[i+2].tangent.y = (deltapos1.y * deltaUV2.y - deltapos2.y * deltaUV1.y) * r;
-            vertexdata[i+2].tangent.z = (deltapos1.z * deltaUV2.y - deltapos2.z * deltaUV1.y) * r;
+            vertexdata[i + 2].tangent.x = (deltapos1.x * deltaUV2.y - deltapos2.x * deltaUV1.y) * r;
+            vertexdata[i + 2].tangent.y = (deltapos1.y * deltaUV2.y - deltapos2.y * deltaUV1.y) * r;
+            vertexdata[i + 2].tangent.z = (deltapos1.z * deltaUV2.y - deltapos2.z * deltaUV1.y) * r;
         }
 
         VkDeviceSize imageSize = TexResolution.x * TexResolution.y * 4 * imagecount;
@@ -1899,8 +1904,8 @@ public:
         }
         matoper(eng);
 
-        eng.ubo.cameraPosition = eng.pos;
-        eng.ubo.resolution = eng.resolution;
+        eng.ubo.resolution.x = (int)eng.resolution.x * eng.resolutionscale;
+        eng.ubo.resolution.y = (int)eng.resolution.y * eng.resolutionscale;
 
         memcpy(uniformBuffersMapped[eng.currentFrame], &eng.ubo, sizeof(eng.ubo));
         memcpy(vdata, vertexdata.data(), sizeof(vertexdata[0]) * totalvertex);

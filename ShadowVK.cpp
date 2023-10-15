@@ -53,12 +53,12 @@ int main(){
     eng.ren.pos.y = 4;
     Object test;
 
-    std::string texpaths[6] = { "data/t.ppm" , "data/t.ppm", "data/t.ppm" , "data/t.ppm", "data/t.ppm" , "data/t.ppm" };
+    std::string texpaths[6] = { "data/t.ppm" , "data/spec.ppm", "data/normal.ppm" , "data/t.ppm", "data/t.ppm" , "data/t.ppm" };
     test.mesh.scale.y = -1;
     test.mesh.cullmode = VK_CULL_MODE_FRONT_BIT;
     test.mesh.shadowcullmode = VK_CULL_MODE_BACK_BIT;
 
-	test.create(eng, "data/raw/vert.spv", "data/raw/frag.spv", "data/m.obj", texpaths, 2, texpaths, 1);
+	test.create(eng, "data/raw/vert.spv", "data/raw/frag.spv", "data/m.obj", texpaths, 3, texpaths, 1);
 	while (eng.ren.shouldterminate()) {
         glfwGetCursorPos(eng.ren.window, &mousepos.x, &mousepos.y);
         eng.ren.rot.y = mousepos.x / eng.ren.resolution.x;
@@ -67,6 +67,8 @@ int main(){
         eng.ren.sFov = eng.ren.fov;
         eng.ren.ShadowPos = eng.ren.pos;
         eng.ren.ShadowRot = eng.ren.rot;
+        eng.ren.ubo.lightColor[0] = glm::vec3(1.0f, 1.0f, 1.0f);
+        eng.ren.ubo.lightPos[0] = glm::vec3(-eng.ren.pos.x, 4, -eng.ren.pos.z);
         eng.beginShadowPass();
 
         test.Draw(eng);
