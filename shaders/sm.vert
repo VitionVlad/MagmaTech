@@ -25,8 +25,8 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     mat4 srotx;
     mat4 sroty;
 
-    vec3 lightPos[10];
-    vec3 lightColor[10];
+    vec4 lightPos[10];
+    vec4 lightColor[10];
 } ubo;
 
 layout(location = 1) out vec2 fuv;

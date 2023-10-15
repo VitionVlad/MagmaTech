@@ -67,8 +67,8 @@ int main(){
         eng.ren.sFov = eng.ren.fov;
         eng.ren.ShadowPos = eng.ren.pos;
         eng.ren.ShadowRot = eng.ren.rot;
-        eng.ren.ubo.lightColor[0] = glm::vec3(1.0f, 1.0f, 1.0f);
-        eng.ren.ubo.lightPos[0] = glm::vec3(-eng.ren.pos.x, 4, -eng.ren.pos.z);
+        eng.ren.ubo.lightColor[0] = glm::vec4(1.0f, 1.0f, 1.0f, 0);
+        eng.ren.ubo.lightPos[0] = glm::vec4(-eng.ren.pos.x, 4, -eng.ren.pos.z, 0);
         eng.beginShadowPass();
 
         test.Draw(eng);

@@ -1,9 +1,6 @@
 #include <iostream>
 #include <fstream>
 #include "vulkan/vulkan.h"
-#define GLM_FORCE_RADIANS
-//warning, on adnroid GLM_FORCE_DEFAULT_ALIGNED_GENTYPES may not work, modify iy by yourself in order to work
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include <string>
@@ -70,23 +67,23 @@ struct UniformBufferObject {
     int useLookAt = 0;
     glm::vec2 resolution;
     glm::vec3 cameraPosition;
-    glm::mat4 projection;
-    glm::mat4 translate;
-    glm::mat4 rotx;
-    glm::mat4 roty;
+    alignas(16) glm::mat4 projection;
+    alignas(16) glm::mat4 translate;
+    alignas(16) glm::mat4 rotx;
+    alignas(16) glm::mat4 roty;
 
-    glm::mat4 mtranslate;
-    glm::mat4 mroty;
-    glm::mat4 mrotx;
-    glm::mat4 mrotz;
-    glm::mat4 mscale;
+    alignas(16) glm::mat4 mtranslate;
+    alignas(16) glm::mat4 mroty;
+    alignas(16) glm::mat4 mrotx;
+    alignas(16) glm::mat4 mrotz;
+    alignas(16) glm::mat4 mscale;
 
-    glm::mat4 sprojection;
-    glm::mat4 stranslate;
-    glm::mat4 srotx;
-    glm::mat4 sroty;
-    glm::vec3 lightPos[10];
-    glm::vec3 lightColor[10];
+    alignas(16) glm::mat4 sprojection;
+    alignas(16) glm::mat4 stranslate;
+    alignas(16) glm::mat4 srotx;
+    alignas(16) glm::mat4 sroty;
+    alignas(16) glm::vec4 lightPos[10];
+    alignas(16) glm::vec4 lightColor[10];
 };
 
 class Render {
@@ -1171,8 +1168,8 @@ public:
         createsync();
         createImageSampler(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, RenderSampler, 1);
         for (int i = 0; i != 10; i++) {
-            ubo.lightColor[i] = glm::vec3(0, 0, 0);
-            ubo.lightPos[i] = glm::vec3(0, 0, 0);
+            ubo.lightColor[i] = glm::vec4(0, 0, 0, 0);
+            ubo.lightPos[i] = glm::vec4(0, 0, 0, 0);
         }
         ShadowVertexPath = pathprefix + ShadowVertexPath;
         ShadowFragmentPath = pathprefix + ShadowFragmentPath;

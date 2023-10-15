@@ -23,8 +23,8 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     mat4 srotx;
     mat4 sroty;
 
-    vec3 lightPos[10];
-    vec3 lightColor[10];
+    vec4 lightPos[10];
+    vec4 lightColor[10];
 } ubo;
 
 layout(set = 0, binding = 1) uniform sampler2DArray texSampler;
@@ -49,11 +49,11 @@ void main() {
 
     for(int i = 0; i < 10; i++){
         vec3 norm = normalize(normals);
-        vec3 lightDir = normalize(ubo.lightPos[i] - pos);  
+        vec3 lightDir = normalize(ubo.lightPos[i].xyz - pos);  
 
         float diff = max(dot(norm, lightDir), 0.0);
 
-        color += (diff + ambient)*albedo*ubo.lightColor[i];
+        color += (diff + ambient)*albedo*ubo.lightColor[i].rgb;
     }
 
     outColor = vec4(color, 1.0);
