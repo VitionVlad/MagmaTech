@@ -39,6 +39,8 @@ layout(location = 2) out vec3 normals;
 
 layout(location = 3) out mat3 tbn;
 
+layout(location = 6) out vec4 shp;
+
 void main() {
     vec4 vert = ubo.mscale * vec4(positions, 1.0f);
     vert = ubo.mtranslate * ubo.mrotx * ubo.mroty * ubo.mrotz * vert;
@@ -52,4 +54,11 @@ void main() {
         normalize(normal)
     ));
     tbn = vTBN;
+    vert = ubo.mscale * vec4(positions, 1.0f);
+    vert = ubo.mtranslate * ubo.mrotx * ubo.mroty * ubo.mrotz * vert;
+    if(ubo.useLookAt.x >= 1){
+        shp = ubo.sprojection * ubo.stranslate * vert;
+    }else{
+        shp = ubo.sprojection * ubo.srotx * ubo.sroty * ubo.stranslate * vert;
+    }
 }
