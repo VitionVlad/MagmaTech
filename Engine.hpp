@@ -53,8 +53,8 @@ public:
 
 class Object {
 private:
-	Loader assets;
-	Loader cube;
+	Loader assets{};
+	Loader cube{};
 public:
 	Mesh mesh;
 	void create(Engine& eng, std::string vertshader, std::string fragshader, glm::vec3* vertexes, glm::vec2* uv, glm::vec3* normals, int size, unsigned char* pixels, glm::ivec2 TexResolution, int imagecount, unsigned char* cpixels, glm::ivec2 cubeResolution, int cubecount) {
@@ -62,13 +62,17 @@ public:
 	}
 	void create(Engine& eng, std::string vertshader, std::string fragshader, std::string modelpath, std::string* imagespath, int imagecount, std::string* cubespath, int cubescount) {
 		assets.loadobj(eng.ren.pathprefix + modelpath);
+		std::cout << "log: model loaded" << std::endl;
 		for (int i = 0; i != imagecount; i++) {
 			assets.loadppm(eng.ren.pathprefix + imagespath[i]);
 		}
+		std::cout << "log: main textures loaded" << std::endl;
 		for (int i = 0; i != cubescount * 6; i++) {
 			cube.loadppm(eng.ren.pathprefix + cubespath[i]);
 		}
+		std::cout << "log: cubemaps loaded" << std::endl;
 		mesh.create(eng.ren, eng.ren.pathprefix + vertshader, eng.ren.pathprefix + fragshader, assets.vertex.data(), assets.uv.data(), assets.normals.data(), assets.vertex.size(), assets.pixels.data(), assets.textureResolution, imagecount, cube.pixels.data(), cube.textureResolution, cubescount);
+		std::cout << "log: object created" << std::endl;
 	}
 	void applyChanges(Engine& eng) {
 		mesh.applyChanges(eng.ren);

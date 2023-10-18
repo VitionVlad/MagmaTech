@@ -952,7 +952,7 @@ public:
         depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         depthStencil.depthTestEnable = VK_TRUE;
         depthStencil.depthWriteEnable = VK_TRUE;
-        depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+        depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
         depthStencil.depthBoundsTestEnable = VK_FALSE;
         depthStencil.minDepthBounds = 0.0f;
         depthStencil.maxDepthBounds = 1.0f;
@@ -1869,6 +1869,9 @@ public:
         generateMipmaps(textureImage, TexResolution.x, TexResolution.y, imagecount, eng);
         eng.createImageView(textureImageView, textureImage, VK_IMAGE_VIEW_TYPE_2D_ARRAY, imagecount, mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
         eng.createImageSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, textureSampler, mipLevels);
+
+        vkDestroyBuffer(eng.device, stagingBuffer, nullptr);
+        vkFreeMemory(eng.device, stagingBufferMemory, nullptr);
 
         imageSize = cubeResolution.x * cubeResolution.y * 4 * cubecount * 6;
         std::cout << "log: cube size = " << imageSize << std::endl;

@@ -28,13 +28,6 @@ void movecallback() {
         eng.ren.pos.x -= cos(eng.ren.rot.x) * cos(eng.ren.rot.y) * speed;
         eng.ren.pos.z += cos(eng.ren.rot.x) * sin(eng.ren.rot.y) * -speed;
     }
-    state = glfwGetKey(eng.ren.window, GLFW_KEY_Q);
-    if (state == GLFW_PRESS) { //d
-        eng.ren.ubo.lightColor[0] = glm::vec4(1.0f, 1.0f, 1.0f, 0);
-        eng.ren.ubo.lightPos[0] = glm::vec4(-eng.ren.pos.x, 4, -eng.ren.pos.z, 0);
-        eng.ren.ShadowPos = eng.ren.pos;
-        eng.ren.ShadowRot = eng.ren.rot;
-    }
     state = glfwGetKey(eng.ren.window, GLFW_KEY_ESCAPE);
     if (state == GLFW_PRESS) { //d
         if (mouseattached) {
@@ -53,20 +46,28 @@ int main(){
     eng.ren.resolutionscale = 1;
 	eng.init("test");
     glfwSetInputMode(eng.ren.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    eng.ren.ShadowOrtho = false;
-    eng.ren.useShadowLookAt = false;
+    eng.ren.ShadowOrtho = true;
+    eng.ren.useShadowLookAt = true;
     eng.ren.ShadowLookAt = glm::vec3(0, 0, 0);
+    eng.ren.ShadowPos = glm::vec3(-50, -50, 50);
+    eng.ren.sFov = 30;
     eng.ren.pos.z = -2;
     eng.ren.pos.y = 4;
     eng.ren.ubo.lightColor[0] = glm::vec4(1.0f, 1.0f, 1.0f, 0);
+    eng.ren.ubo.lightPos[0] = glm::vec4(1, -1, 1, 1);
     Object test;
+    Object cube;
 
-    std::string texpaths[6] = { "data/t.ppm" , "data/spec.ppm", "data/normal.ppm" , "data/t.ppm", "data/t.ppm" , "data/t.ppm" };
+    std::string cubemap[6] = { "data/right.ppm" , "data/left.ppm", "data/top.ppm", "data/bottom.ppm" , "data/front.ppm", "data/back.ppm" };
+    std::string texpaths[3] = { "data/t.ppm" , "data/spec.ppm", "data/normal.ppm"};
     test.mesh.scale.y = -1;
     test.mesh.cullmode = VK_CULL_MODE_FRONT_BIT;
     test.mesh.shadowcullmode = VK_CULL_MODE_BACK_BIT;
 
-	test.create(eng, "data/raw/vert.spv", "data/raw/frag.spv", "data/m.obj", texpaths, 3, texpaths, 1);
+	test.create(eng, "data/raw/vert.spv", "data/raw/frag.spv", "data/m.obj", texpaths, 3, cubemap, 1);
+    cube.mesh.scale = glm::vec3(1000, 1000, 1000);
+    cube.mesh.cullmode = VK_CULL_MODE_FRONT_BIT;
+    cube.create(eng, "data/raw/vertc.spv", "data/raw/fragc.spv", "data/cube.obj", texpaths, 3, cubemap, 1);
 	while (eng.ren.shouldterminate()) {
         glfwGetCursorPos(eng.ren.window, &mousepos.x, &mousepos.y);
         eng.ren.rot.y = mousepos.x / eng.ren.resolution.x;
@@ -80,6 +81,7 @@ int main(){
         eng.beginMainPass();
 
 		test.Draw(eng);
+        cube.Draw(eng);
 
 		eng.endRender();
 	}

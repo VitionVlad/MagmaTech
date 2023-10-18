@@ -62,41 +62,50 @@ float isInShadow(){
     return shadow;
 }
 
-vec3 point(float roughness, int i){
-    vec3 norm = normalize(normals);
+vec3 point(float roughness, int i, float ambient){
+    float constant = 1.0;
+    float linear = 0.09;
+    float quadratic = 0.032;
+    float distance    = length(ubo.lightPos[i].xyz - pos);
+    float attenuation = 1.0 / (constant + linear * distance + quadratic * (distance * distance)); 
+
+    vec3 norm = normalize(texture(texSampler, vec3(fuv, 2)).rgb*2.0 - 1.0);
     vec3 lightDir = normalize(ubo.lightPos[i].xyz - pos);  
-    float diff = max(dot(norm, lightDir), 0.0);
+    float diff = max(dot(tbn * norm, tbn * lightDir), 0.0);
 
     vec3 viewDir = normalize(vec3(-ubo.cameraPosition.x, ubo.cameraPosition.y, -ubo.cameraPosition.z) - pos);
     vec3 halfwayDir = normalize(lightDir + viewDir);
 
-    float spec = pow(max(dot(norm, halfwayDir), 0.0), 16.0);
+    float spec = pow(max(dot(tbn * norm, tbn * halfwayDir), 0.0), 16.0);
     vec3 specular = roughness * spec * ubo.lightColor[i].rgb;  
-    return diff + specular;
+    diff  *= attenuation;
+    specular *= attenuation; 
+    ambient *= attenuation;  
+    return diff + specular + ambient;
 }
 
 vec3 directional(float roughness, int i){
-    vec3 norm = normalize(normals);
+    vec3 norm = normalize(texture(texSampler, vec3(fuv, 2)).rgb*2.0 - 1.0);
     vec3 lightDir = normalize(ubo.lightPos[i].xyz);  
-    float diff = max(dot(norm, lightDir), 0.0);
+    float diff = max(dot(tbn * norm, tbn * lightDir), 0.0);
 
     vec3 viewDir = normalize(vec3(-ubo.cameraPosition.x, ubo.cameraPosition.y, -ubo.cameraPosition.z) - pos);
     vec3 halfwayDir = normalize(lightDir + viewDir);
 
-    float spec = pow(max(dot(norm, halfwayDir), 0.0), 16.0);
+    float spec = pow(max(dot(tbn * norm, tbn * halfwayDir), 0.0), 16.0);
     vec3 specular = roughness * spec * ubo.lightColor[i].rgb;  
     return diff + specular;
 }
 
 void main() {
     vec3 color = vec3(0, 0, 0);
-    float ambient = 0.2;
+    float ambient = 0.4;
     vec3  albedo = texture(texSampler, vec3(fuv, 0)).rgb;
     float roughness = texture(texSampler, vec3(fuv, 1)).r;
 
     for(int i = 0; i < 10; i++){
         if(ubo.lightPos[i].w < 1){
-            color += (point(roughness, i) * (ambient + (1.0 - isInShadow()))) * albedo * ubo.lightColor[i].rgb;
+            color += (point(roughness, i, ambient) * (ambient + (1.0 - isInShadow()))) * albedo * ubo.lightColor[i].rgb;
         }else{
             color += (directional(roughness, i) * (ambient + (1.0 - isInShadow()))) * albedo * ubo.lightColor[i].rgb;
         }
