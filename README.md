@@ -8,9 +8,9 @@ shadowmap
 resolution scale  
 full android support  
 cubemap  
-![image](https://github.com/VitionVlad/MagmaTech/assets/48290199/b7573969-a2b8-4968-9247-cf7192148da3)  
-example of scene working on windows  
-![image](https://github.com/VitionVlad/MagmaTech/assets/48290199/f4b1d299-77f8-4384-8d93-1cb711f5cc35)
-Shadowmapping example  
-![Screenshot_20231015-112322](https://github.com/VitionVlad/MagmaTech/assets/48290199/c9d2caad-e6b5-462b-83c2-d80eaf726e04)  
+![Screenshot 2023-10-18 193733](https://github.com/VitionVlad/MagmaTech/assets/48290199/7f332c68-cb84-44a0-bce3-2fe7303679dd)
+shadow acne is caused by the model, you can ad bias in shader, or use correct models to avoid it  
+![Screenshot 2023-10-18 193721](https://github.com/VitionVlad/MagmaTech/assets/48290199/b8f409f6-b6f3-42f3-8efa-0e4d23fdac89)
+cubemaps  
+![Screenshot_20231018-203847](https://github.com/VitionVlad/MagmaTech/assets/48290199/4db58c38-52a2-478a-ba80-139ee6edee60)
 same scene running on android phone (google pixel 5, android 14)  
