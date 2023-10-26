@@ -14,3 +14,5 @@ shadow acne is caused by the model, you can ad bias in shader, or use correct mo
 cubemaps  
 ![Screenshot_20231018-203847](https://github.com/VitionVlad/MagmaTech/assets/48290199/4db58c38-52a2-478a-ba80-139ee6edee60)
 same scene running on android phone (google pixel 5, android 14)  
+# Audio
+audio in engine is based on miniaudio library, so it can work on windows, linux, android, and a lot of other thing, i personally tested on android and windows, it works! simple spacial audio system is included, but you can turn it off  
