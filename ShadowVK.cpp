@@ -60,14 +60,15 @@ int main(){
 
     std::string cubemap[6] = { "data/right.ppm" , "data/left.ppm", "data/top.ppm", "data/bottom.ppm" , "data/front.ppm", "data/back.ppm" };
     std::string texpaths[3] = { "data/t.ppm" , "data/spec.ppm", "data/normal.ppm"};
-    test.mesh.scale.y = -1;
+    test.scale.y = -1;
     test.mesh.cullmode = VK_CULL_MODE_FRONT_BIT;
     test.mesh.shadowcullmode = VK_CULL_MODE_BACK_BIT;
 
-	test.create(eng, "data/raw/vert.spv", "data/raw/frag.spv", "data/m.obj", texpaths, 3, cubemap, 1);
-    cube.mesh.scale = glm::vec3(1000, 1000, 1000);
+	test.createNoCube(eng, "data/raw/vert.spv", "data/raw/frag.spv", "data/m.obj", texpaths, 3, "data/test.mp3", 1);
+    cube.scale = glm::vec3(1000, 1000, 1000);
     cube.mesh.cullmode = VK_CULL_MODE_FRONT_BIT;
-    cube.create(eng, "data/raw/vertc.spv", "data/raw/fragc.spv", "data/cube.obj", texpaths, 3, cubemap, 1);
+    cube.createNoTex(eng, "data/raw/vertc.spv", "data/raw/fragc.spv", "data/cube.obj", cubemap, 1);
+
 	while (eng.ren.shouldterminate()) {
         glfwGetCursorPos(eng.ren.window, &mousepos.x, &mousepos.y);
         eng.ren.rot.y = mousepos.x / eng.ren.resolution.x;
