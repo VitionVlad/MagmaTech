@@ -4,6 +4,8 @@
 
 #include "Audio.hpp"
 
+#include "Physics.hpp"
+
 class Engine {
 private:
 	ma_result result;
@@ -12,8 +14,12 @@ private:
 	ANativeWindow* lwindow;
 #endif
 public:
+	glm::vec3 pos = glm::vec3(0, 0, 0);
+	glm::vec2 rot = glm::vec2(0, 0);
 	ma_engine aud;
 	Render ren;
+	PhysEngine peng;
+	bool enablefallphysics = true;
 	float volume = 1.0f;
 #if defined(__ANDROID__)
 	void init(std::string appname, ANativeWindow* window) {
@@ -23,6 +29,10 @@ public:
 		if (result != MA_SUCCESS) {
 			exit(result);
 		}
+		ren.pos = pos;
+		ren.rot = rot;
+		peng.pos = pos;
+		peng.lpos = pos;
 	}
 #else
 	void init(std::string appname) {
@@ -32,6 +42,10 @@ public:
 			std::cout << "error: failed to init miniaudio" << std::endl;
 			exit(-1);
 		}
+		ren.pos = pos;
+		ren.rot = rot;
+		peng.pos = pos;
+		peng.lpos = pos;
 		std::cout << "log: engine inited with success" << std::endl;
 	}
 #endif
@@ -42,6 +56,9 @@ public:
 #else
 			ren.beginRender();
 #endif
+			ren.pos = pos;
+			ren.rot = rot;
+			peng.pos = pos;
 			begun = true;
 		}
 		ren.beginShadowPass();
@@ -53,13 +70,25 @@ public:
 #else
 			ren.beginRender();
 #endif
+			ren.pos = pos;
+			ren.rot = rot;
+			peng.pos = pos;
 			begun = true;
 		}
 		ren.beginMainPass();
 	}
 	void endRender() {
 		ren.endRender();
+		for (int i = 0; i != peng.bombs.size(); i++) {
+			peng.bombs[i].actioned = true;
+		}
 		begun = false;
+		peng.lpos = peng.pos;
+		ren.pos = peng.pos;
+		pos = peng.pos;
+		if (enablefallphysics) {
+			pos.y -= peng.mass;
+		}
 	}
 	void terminate() {
 		ren.terminate();
@@ -70,13 +99,15 @@ class Object {
 private:
 	Loader assets{};
 	Loader cube{};
-	bool withaudio = false;
 public:
 	Mesh mesh;
+	MeshPhys phys;
 	AudioSource audio;
 	glm::vec3 pos = glm::vec3(0, 0, 0);
 	glm::vec3 rot = glm::vec3(0, 0, 0);
 	glm::vec3 scale = glm::vec3(1, 1, 1);
+	bool enablecollision = true;
+	bool withaudio = false;
 	void create(Engine& eng, std::string vertshader, std::string fragshader, glm::vec3* vertexes, glm::vec2* uv, glm::vec3* normals, int size, unsigned char* pixels, glm::ivec2 TexResolution, int imagecount, unsigned char* cpixels, glm::ivec2 cubeResolution, int cubecount) {
 		mesh.create(eng.ren, eng.ren.pathprefix + vertshader, eng.ren.pathprefix + fragshader, vertexes, uv, normals, size, pixels, TexResolution, imagecount, cpixels, cubeResolution, cubecount);
 	}
@@ -186,5 +217,10 @@ public:
 			audio.play(eng.volume, eng.ren.pos);
 		}
 		mesh.Draw(eng.ren);
+		if (enablecollision) {
+			for (int i = 0; i != mesh.vertexdata.size(); i += 3) {
+				phys.physWork(eng.peng, mesh.vertexdata[i].position, mesh.vertexdata[i + 1].position, mesh.vertexdata[i + 2].position, eng.ren.ubo.mtranslate, eng.ren.ubo.mrotx, eng.ren.ubo.mroty, eng.ren.ubo.mrotz, eng.ren.ubo.mscale);
+			}
+		}
 	}
 };

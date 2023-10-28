@@ -10,23 +10,28 @@ bool mouseattached = true;
 void movecallback() {
     int state = glfwGetKey(eng.ren.window, GLFW_KEY_W);
     if (state == GLFW_PRESS) { //w
-        eng.ren.pos.z += cos(eng.ren.rot.x) * cos(eng.ren.rot.y) * speed;
-        eng.ren.pos.x += cos(eng.ren.rot.x) * sin(eng.ren.rot.y) * -speed;
+        eng.pos.z += cos(eng.rot.x) * cos(eng.rot.y) * speed;
+        eng.pos.x += cos(eng.rot.x) * sin(eng.rot.y) * -speed;
     }
     state = glfwGetKey(eng.ren.window, GLFW_KEY_A);
     if (state == GLFW_PRESS) { // a
-        eng.ren.pos.x += cos(eng.ren.rot.x) * cos(eng.ren.rot.y) * speed;
-        eng.ren.pos.z -= cos(eng.ren.rot.x) * sin(eng.ren.rot.y) * -speed;
+        eng.pos.x += cos(eng.rot.x) * cos(eng.rot.y) * speed;
+        eng.pos.z -= cos(eng.rot.x) * sin(eng.rot.y) * -speed;
     }
     state = glfwGetKey(eng.ren.window, GLFW_KEY_S);
     if (state == GLFW_PRESS) { // s
-        eng.ren.pos.z -= cos(eng.ren.rot.x) * cos(eng.ren.rot.y) * speed;
-        eng.ren.pos.x -= cos(eng.ren.rot.x) * sin(eng.ren.rot.y) * -speed;
+        eng.pos.z -= cos(eng.rot.x) * cos(eng.rot.y) * speed;
+        eng.pos.x -= cos(eng.rot.x) * sin(eng.rot.y) * -speed;
     }
     state = glfwGetKey(eng.ren.window, GLFW_KEY_D);
     if (state == GLFW_PRESS) { //d
-        eng.ren.pos.x -= cos(eng.ren.rot.x) * cos(eng.ren.rot.y) * speed;
-        eng.ren.pos.z += cos(eng.ren.rot.x) * sin(eng.ren.rot.y) * -speed;
+        eng.pos.x -= cos(eng.rot.x) * cos(eng.rot.y) * speed;
+        eng.pos.z += cos(eng.rot.x) * sin(eng.rot.y) * -speed;
+    }
+    state = glfwGetKey(eng.ren.window, GLFW_KEY_E);
+    if (state == GLFW_PRESS) { //d
+        eng.peng.bombs[0].pos = glm::vec3(-eng.pos.x, eng.pos.y, eng.pos.z);
+        eng.peng.bombs[0].actioned = false;
     }
     state = glfwGetKey(eng.ren.window, GLFW_KEY_ESCAPE);
     if (state == GLFW_PRESS) { //d
@@ -44,6 +49,8 @@ void movecallback() {
 int main(){
     glm::dvec2 mousepos;
     eng.ren.resolutionscale = 1;
+    eng.pos.z = -2;
+    eng.pos.y = 4;
 	eng.init("test");
     glfwSetInputMode(eng.ren.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     eng.ren.ShadowOrtho = true;
@@ -51,10 +58,10 @@ int main(){
     eng.ren.ShadowLookAt = glm::vec3(0, 0, 0);
     eng.ren.ShadowPos = glm::vec3(-50, -50, 50);
     eng.ren.sFov = 30;
-    eng.ren.pos.z = -2;
-    eng.ren.pos.y = 4;
     eng.ren.ubo.lightColor[0] = glm::vec4(1.0f, 1.0f, 1.0f, 0);
     eng.ren.ubo.lightPos[0] = glm::vec4(1, -1, 1, 1);
+    eng.peng.createNewBomb(glm::vec3(eng.pos.x, eng.pos.y, eng.pos.z), 5);
+    eng.peng.bombs[0].actioned = true;
     Object test;
     Object cube;
 
@@ -68,11 +75,12 @@ int main(){
     cube.scale = glm::vec3(1000, 1000, 1000);
     cube.mesh.cullmode = VK_CULL_MODE_FRONT_BIT;
     cube.createNoTex(eng, "data/raw/vertc.spv", "data/raw/fragc.spv", "data/cube.obj", cubemap, 1);
+    cube.phys.canbedestroyed = false;
 
 	while (eng.ren.shouldterminate()) {
         glfwGetCursorPos(eng.ren.window, &mousepos.x, &mousepos.y);
-        eng.ren.rot.y = mousepos.x / eng.ren.resolution.x;
-        eng.ren.rot.x = -mousepos.y / eng.ren.resolution.y;
+        eng.rot.y = mousepos.x / eng.ren.resolution.x;
+        eng.rot.x = -mousepos.y / eng.ren.resolution.y;
         movecallback();
         eng.ren.sFov = eng.ren.fov;
         eng.beginShadowPass();
