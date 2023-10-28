@@ -106,7 +106,7 @@ public:
 	glm::vec3 pos = glm::vec3(0, 0, 0);
 	glm::vec3 rot = glm::vec3(0, 0, 0);
 	glm::vec3 scale = glm::vec3(1, 1, 1);
-	bool enablecollision = true;
+	bool enablecollisiondetect = true;
 	bool withaudio = false;
 	void create(Engine& eng, std::string vertshader, std::string fragshader, glm::vec3* vertexes, glm::vec2* uv, glm::vec3* normals, int size, unsigned char* pixels, glm::ivec2 TexResolution, int imagecount, unsigned char* cpixels, glm::ivec2 cubeResolution, int cubecount) {
 		mesh.create(eng.ren, eng.ren.pathprefix + vertshader, eng.ren.pathprefix + fragshader, vertexes, uv, normals, size, pixels, TexResolution, imagecount, cpixels, cubeResolution, cubecount);
@@ -217,7 +217,7 @@ public:
 			audio.play(eng.volume, eng.ren.pos);
 		}
 		mesh.Draw(eng.ren);
-		if (enablecollision) {
+		if (enablecollisiondetect && !eng.ren.shadowpass) {
 			for (int i = 0; i != mesh.vertexdata.size(); i += 3) {
 				phys.physWork(eng.peng, mesh.vertexdata[i].position, mesh.vertexdata[i + 1].position, mesh.vertexdata[i + 2].position, eng.ren.ubo.mtranslate, eng.ren.ubo.mrotx, eng.ren.ubo.mroty, eng.ren.ubo.mrotz, eng.ren.ubo.mscale);
 			}

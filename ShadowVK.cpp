@@ -75,7 +75,7 @@ int main(){
     cube.scale = glm::vec3(1000, 1000, 1000);
     cube.mesh.cullmode = VK_CULL_MODE_FRONT_BIT;
     cube.createNoTex(eng, "data/raw/vertc.spv", "data/raw/fragc.spv", "data/cube.obj", cubemap, 1);
-    cube.phys.canbedestroyed = false;
+    cube.enablecollisiondetect = false;
 
 	while (eng.ren.shouldterminate()) {
         glfwGetCursorPos(eng.ren.window, &mousepos.x, &mousepos.y);

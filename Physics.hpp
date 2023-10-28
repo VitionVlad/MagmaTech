@@ -45,7 +45,10 @@ public:
 	bool scalebool = false;
 	bool rotbool = false;
 	bool transbool = false;
+	bool collision = true;
+	int isinteracting = 0;
 	void physWork(PhysEngine& eng, glm::vec3& v1, glm::vec3& v2, glm::vec3& v3, glm::mat4& mtrans, glm::mat4& mrx, glm::mat4& mry, glm::mat4& mrz, glm::mat4& ms) {
+		isinteracting = 0;
 		center.x = (v1.x + v2.x + v3.x) / 3;
 		center.y = (v1.y + v2.y + v3.y) / 3;
 		center.z = (v1.z + v2.z + v3.z) / 3;
@@ -73,10 +76,16 @@ public:
 			inRange(-eng.pos.z - eng.aabb.z, -eng.pos.z + eng.aabb.z, center.z) &&
 			center.y >= eng.pos.y - eng.aabb.y - 0.1 &&
 			center.y <= eng.pos.y) {
-			eng.pos.y = eng.lpos.y;
+			if (collision) {
+				eng.pos.y = eng.lpos.y;
+			}
+			isinteracting = 1;
 			if (center.y > eng.pos.y - eng.aabb.y / 2) {
-				eng.pos.x = eng.lpos.x;
-				eng.pos.z = eng.lpos.z;
+				if (collision) {
+					eng.pos.x = eng.lpos.x;
+					eng.pos.z = eng.lpos.z;
+				}
+				isinteracting = 2;
 			}
 		}
 	}
