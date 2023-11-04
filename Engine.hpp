@@ -6,6 +6,8 @@
 
 #include "Physics.hpp"
 
+#include "clickzone.hpp"
+
 class Engine {
 private:
 	ma_result result;
@@ -132,10 +134,7 @@ public:
 			assets.loadppm(eng.ren.pathprefix + imagespath[i]);
 		}
 		std::cout << "log: main textures loaded" << std::endl;
-		unsigned char data[24];
-		for (int i = 0; i != 24; i++) {
-			data[i] = 255;
-		}
+		unsigned char data[24]{};
 		mesh.create(eng.ren, eng.ren.pathprefix + vertshader, eng.ren.pathprefix + fragshader, assets.vertex.data(), assets.uv.data(), assets.normals.data(), assets.vertex.size(), assets.pixels.data(), assets.textureResolution, imagecount, data, glm::ivec2(1, 1), 1);
 		std::cout << "log: object created" << std::endl;
 	}
@@ -183,10 +182,7 @@ public:
 			assets.loadppm(eng.ren.pathprefix + imagespath[i]);
 		}
 		std::cout << "log: main textures loaded" << std::endl;
-		unsigned char data[24];
-		for (int i = 0; i != 24; i++) {
-			data[i] = 0;
-		}
+		unsigned char data[24]{};
 		mesh.create(eng.ren, eng.ren.pathprefix + vertshader, eng.ren.pathprefix + fragshader, assets.vertex.data(), assets.uv.data(), assets.normals.data(), assets.vertex.size(), assets.pixels.data(), assets.textureResolution, imagecount, data, glm::ivec2(1, 1), 1);
 		std::cout << "log: object created" << std::endl;
 		withaudio = true;
@@ -222,5 +218,110 @@ public:
 				phys.physWork(eng.peng, mesh.vertexdata[i].position, mesh.vertexdata[i + 1].position, mesh.vertexdata[i + 2].position, eng.ren.ubo.mtranslate, eng.ren.ubo.mrotx, eng.ren.ubo.mroty, eng.ren.ubo.mrotz, eng.ren.ubo.mscale);
 			}
 		}
+	}
+};
+
+class uiBanner {
+private:
+	Loader assets{};
+public:
+	Object banner;
+	glm::vec2 pos = glm::vec2(0, 0);
+	glm::vec2 size = glm::vec2(0, 0);
+	float depth = 0.5;
+	void create(Engine& eng, glm::vec2 bpos, glm::vec2 bsize, glm::vec2 *uv, std::string pathtotex, std::string vertshader, std::string fragshader) {
+		pos = bpos;
+		size = bsize;
+		banner.pos = glm::vec3(bpos.x, bpos.y, -depth);
+		banner.mesh.cullmode = VK_CULL_MODE_NONE;
+		banner.enablecollisiondetect = false;
+		glm::vec3 vert[6] = {
+			glm::vec3(0, 0 + size.y, 0),
+			glm::vec3(0, 0, 0),
+			glm::vec3(0 + size.y, 0, 0),
+			glm::vec3(0, 0 + size.y, 0),
+			glm::vec3(0 + size.y, 0, 0),
+			glm::vec3(0 + size.y, 0 + size.y, 0)
+		};
+		glm::vec2 luv[6] = {
+			uv[0],
+			uv[1],
+			uv[2],
+			uv[0],
+			uv[2],
+			uv[3]
+		};
+		assets.loadppm(pathtotex);
+		unsigned char c[24]{};
+		banner.create(eng, vertshader, fragshader, vert, luv, vert, 6, assets.pixels.data(), assets.textureResolution, 1, c, glm::ivec2(1, 1), 1);
+	}
+	void create(Engine& eng, glm::vec2 bpos, glm::vec2 bsize, std::string pathtotex, std::string vertshader, std::string fragshader) {
+		pos = bpos;
+		size = bsize;
+		banner.pos = glm::vec3(bpos.x, bpos.y, -depth);
+		banner.mesh.cullmode = VK_CULL_MODE_NONE;
+		banner.enablecollisiondetect = false;
+		glm::vec3 vert[6] = {
+			glm::vec3(0, 0 + size.y, 0),
+			glm::vec3(0, 0, 0),
+			glm::vec3(0 + size.y, 0, 0),
+			glm::vec3(0, 0 + size.y, 0),
+			glm::vec3(0 + size.y, 0, 0),
+			glm::vec3(0 + size.y, 0 + size.y, 0)
+		};
+		glm::vec2 luv[6] = {
+			glm::vec2(0, 1),
+			glm::vec2(0, 0),
+			glm::vec2(1, 0),
+			glm::vec2(0, 1),
+			glm::vec2(1, 0),
+			glm::vec2(1, 1)
+		};
+		assets.loadppm(pathtotex);
+		unsigned char c[24]{};
+		banner.create(eng, vertshader, fragshader, vert, luv, vert, 6, assets.pixels.data(), assets.textureResolution, 1, c, glm::ivec2(1, 1), 1);
+	}
+	void Draw(Engine& eng) {
+		eng.ren.uimat = true;
+		banner.pos = glm::vec3(pos.x, pos.y, -depth);
+		banner.Draw(eng);
+		eng.ren.uimat = false;
+	}
+};
+
+class uiButton {
+private:
+	float aspect = 1.0f;
+public:
+	uiBanner button;
+	clickzone zone;
+	glm::vec2 pos = glm::vec2(0, 0);
+	glm::vec2 size = glm::vec2(0, 0);
+	void create(Engine& eng, glm::vec2 bpos, glm::vec2 bsize, glm::vec2* uv, std::string pathtotex, std::string vertshader, std::string fragshader) {
+		button.create(eng, bpos, bsize, uv, pathtotex, vertshader, fragshader);
+		button.pos = bpos;
+		button.size = bsize;
+		zone.pos = bpos;
+		zone.size = bsize;
+		pos = bpos;
+		size = bsize;
+	}
+	void create(Engine& eng, glm::vec2 bpos, glm::vec2 bsize, std::string pathtotex, std::string vertshader, std::string fragshader) {
+		button.create(eng, bpos, bsize, pathtotex, vertshader, fragshader);
+		button.pos = bpos;
+		button.size = bsize;
+		zone.pos = bpos;
+		zone.size = bsize;
+		pos = bpos;
+		size = bsize;
+	}
+	int Draw(Engine& eng, glm::vec2 pointer, bool ispressed) {
+		aspect = eng.ren.resolution.x / eng.ren.resolution.y;
+		button.pos = pos;
+		button.size = size;
+		zone.pos = pos;
+		zone.size = size;
+		button.Draw(eng);
+		return zone.action(glm::vec2(pointer.x, pointer.y), ispressed);
 	}
 };

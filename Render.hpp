@@ -782,6 +782,7 @@ public:
     bool uselayer = false;
     bool shadowrecreated = false;
     bool fullscreen;
+    bool uimat = false;
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1760,7 +1761,7 @@ private:
     void matoper(Render& eng) {
         if (enablePlayerMatrix) {
             if (eng.useOrthographic) {
-                eng.ubo.projection = glm::ortho(-eng.fov, eng.fov, -eng.fov / (eng.resolution.x / eng.resolution.y), eng.fov / (eng.resolution.x / eng.resolution.y), eng.zNear, eng.zFar);
+                eng.ubo.projection = glm::ortho(-eng.fov, eng.fov, -eng.fov, eng.fov, eng.zNear, eng.zFar);
             }
             else {
                 eng.ubo.projection = glm::perspective(eng.fov, (float)eng.resolution.x / eng.resolution.y, eng.zNear, eng.zFar);
@@ -1768,6 +1769,9 @@ private:
             eng.ubo.translate = glm::translate(glm::mat4(1.0f), glm::vec3(eng.pos.x, eng.pos.y, eng.pos.z));
             eng.ubo.rotx = glm::rotate(glm::mat4(1.0f), eng.rot.x, glm::vec3(1, 0, 0));
             eng.ubo.roty = glm::rotate(glm::mat4(1.0f), eng.rot.y, glm::vec3(0, 1, 0));
+            if (eng.uimat) {
+                eng.ubo.projection = glm::ortho(0.0f, (float)eng.resolution.x, 0.0f, (float)eng.resolution.y, 0.1f, 1000.0f);
+            }
         }
         if (enableMeshMatrix) {
             eng.ubo.mtranslate = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x, pos.y, pos.z));

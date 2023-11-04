@@ -71,18 +71,23 @@ int main(){
     test.mesh.cullmode = VK_CULL_MODE_FRONT_BIT;
     test.mesh.shadowcullmode = VK_CULL_MODE_BACK_BIT;
 
-	test.createNoCube(eng, "data/raw/vert.spv", "data/raw/frag.spv", "data/m.obj", texpaths, 3, "data/test.mp3", 1);
+	test.createNoCube(eng, "data/raw/vert.spv", "data/raw/frag.spv", "data/m.obj", texpaths, 3/*, "data/test.mp3", 1*/);
     cube.scale = glm::vec3(1000, 1000, 1000);
     cube.mesh.cullmode = VK_CULL_MODE_FRONT_BIT;
     cube.createNoTex(eng, "data/raw/vertc.spv", "data/raw/fragc.spv", "data/cube.obj", cubemap, 1);
     cube.enablecollisiondetect = false;
+
+    uiButton ban1;
+    ban1.create(eng, glm::vec2(0, 0), glm::vec2(100, 100), "data/right.ppm", "data/raw/uivert.spv", "data/raw/uifrag.spv");
+
+    int state;
 
 	while (eng.ren.shouldterminate()) {
         glfwGetCursorPos(eng.ren.window, &mousepos.x, &mousepos.y);
         eng.rot.y = mousepos.x / eng.ren.resolution.x;
         eng.rot.x = -mousepos.y / eng.ren.resolution.y;
         movecallback();
-        eng.ren.sFov = eng.ren.fov;
+        state = glfwGetMouseButton(eng.ren.window, GLFW_MOUSE_BUTTON_LEFT);
         eng.beginShadowPass();
 
         test.Draw(eng);
@@ -91,6 +96,8 @@ int main(){
 
 		test.Draw(eng);
         cube.Draw(eng);
+        
+        std::cout << ban1.Draw(eng, glm::vec2(mousepos.x, mousepos.y), (state == GLFW_PRESS)) << std::endl;
 
 		eng.endRender();
 	}

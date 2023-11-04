@@ -30,7 +30,7 @@ public:
 			ma_sound_set_volume(&sound, volume * (maxdist / dist));
 		}
 		else {
-			ma_sound_set_volume(&sound, 0);
+			ma_sound_set_volume(&sound, 0.0001);
 		}
 		if (!ma_sound_is_playing(&sound)) {
 			ma_sound_start(&sound);
