@@ -50,7 +50,7 @@ int main(){
     glm::dvec2 mousepos;
     eng.ren.resolutionscale = 1;
     eng.pos.z = -2;
-    eng.pos.y = 4;
+    eng.pos.y = 8;
 	eng.init("test");
     glfwSetInputMode(eng.ren.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     eng.ren.ShadowOrtho = true;

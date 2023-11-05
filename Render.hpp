@@ -113,12 +113,12 @@ private:
         readcfg.open(pathprefix + "eng/cfg/Render.cfg");
 
         if (!readcfg.is_open()) {
-            std::cout << "log: failed to read Render configuration, creating a new one..." << std::endl;
+            std::cout << "log:\u001b[31m failed to read Render configuration, creating a new one...\u001b[37m" << std::endl;
             cfw = true;
             writecfg.open(pathprefix + "eng/cfg/Render.cfg");
         }
 
-        std::cout << "log: instance creating began" << std::endl;
+        std::cout << "log:\u001b[36m instance creating began\u001b[37m" << std::endl;
         VkApplicationInfo appinfo{};
         appinfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appinfo.pApplicationName = appname.c_str();
@@ -174,7 +174,7 @@ private:
         layerNames.resize(layercont);
         for (int i = 0; i != layercont; i++) {
             layerNames[i] = lprop[i].layerName;
-            std::cout << "log: Enabling Instance Layer:" << lprop[i].layerName << std::endl;
+            std::cout << "log:\u001b[36m Enabling Instance Layer:" << lprop[i].layerName << "\u001b[37m" << std::endl;
         }
 
         createInfo.ppEnabledLayerNames = layerNames.data();
@@ -185,7 +185,7 @@ private:
         }
 
         vkCreateInstance(&createInfo, nullptr, &instance);
-        std::cout << "log: instance created" << std::endl;
+        std::cout << "log:\u001b[32m instance created\u001b[37m" << std::endl;
     }
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDeviceQueueCreateInfo queueinfo{};
@@ -224,8 +224,8 @@ private:
 
         VkPhysicalDeviceProperties physprop{};
         vkGetPhysicalDeviceProperties(physicalDevice, &physprop);
-        std::cout << "log: device name = " << physprop.deviceName << std::endl;
-        std::cout << "log: device type = " << physprop.deviceType << std::endl;
+        std::cout << "log:\u001b[36m device name = " << physprop.deviceName << "\u001b[37m" << std::endl;
+        std::cout << "log:\u001b[36m device type = " << physprop.deviceType << "\u001b[37m" << std::endl;
         devicename = physprop.deviceName;
 
         uint32_t queueFamilyCount = 0;
@@ -268,7 +268,7 @@ private:
         vkGetDeviceQueue(device, queueinfo.queueFamilyIndex, 0, &graphicsQueue);
         vkGetDeviceQueue(device, queueinfo.queueFamilyIndex, 0, &presentQueue);
 
-        std::cout << "log: device created" << std::endl;
+        std::cout << "log:\u001b[32m device created\u001b[37m" << std::endl;
     }
     VkSurfaceKHR surface{};
 #if defined(__ANDROID__)
@@ -323,7 +323,7 @@ private:
         createInfo.oldSwapchain = VK_NULL_HANDLE;
         createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
         vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain);
-        std::cout << "log: swapchain created" << std::endl;
+        std::cout << "log:\u001b[32m swapchain created\u001b[37m" << std::endl;
         vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
         swapChainImages.resize(imageCount);
         vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
@@ -346,7 +346,7 @@ private:
             createInfo.subresourceRange.layerCount = 1;
             vkCreateImageView(device, &createInfo, nullptr, &swapChainImageViews[i]);
         }
-        std::cout << "log: swapchain images created" << std::endl;
+        std::cout << "log:\u001b[32m swapchain images created\u001b[37m" << std::endl;
     }
     VkRenderPassCreateInfo renderPassInfo{};
     VkSubpassDependency dependency{};
@@ -404,7 +404,7 @@ private:
         vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
         colorAttachment[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
         vkCreateRenderPass(device, &renderPassInfo, nullptr, &mainPass);
-        std::cout << "log: main renderpass created" << std::endl;
+        std::cout << "log:\u001b[32m main renderpass created\u001b[37m" << std::endl;
     }
     std::vector<VkFramebuffer> swapChainFramebuffers;
     VkFramebuffer ShadowFramebuffer;
@@ -439,7 +439,7 @@ private:
         vkAllocateMemory(device, &allocInfo, nullptr, &depthImageMemory);
         vkBindImageMemory(device, depthImage, depthImageMemory, 0);
 
-        std::cout << "log: depth image created" << std::endl;
+        std::cout << "log:\u001b[32m depth image created\u001b[37m" << std::endl;
         VkImageViewCreateInfo viewinfo{};
         viewinfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         viewinfo.image = depthImage;
@@ -455,7 +455,7 @@ private:
         viewinfo.subresourceRange.baseArrayLayer = 0;
         viewinfo.subresourceRange.layerCount = 1;
         vkCreateImageView(device, &viewinfo, nullptr, &depthImageView);
-        std::cout << "log: image view created" << std::endl;
+        std::cout << "log:\u001b[32m image view created\u001b[37m" << std::endl;
     }
     void createswfrm() {
         swapChainFramebuffers.resize(swapChainImageViews.size());
@@ -474,7 +474,7 @@ private:
             framebufferInfo.layers = 1;
 
             vkCreateFramebuffer(device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]);
-            std::cout << "log: swapchain framebuffer created" << std::endl;
+            std::cout << "log:\u001b[32m swapchain framebuffer created\u001b[37m" << std::endl;
         }
     }
     void createshadowfrm() {
@@ -517,14 +517,14 @@ private:
         poolInfo.queueFamilyIndex = queueFamilyIndex;
         VkCommandBufferAllocateInfo allocInfo{};
         vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool);
-        std::cout << "log: command pool created" << std::endl;
+        std::cout << "log:\u001b[32m command pool created\u001b[37m" << std::endl;
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.commandPool = commandPool;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = 1;
         allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
         vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data());
-        std::cout << "log: command buffer created" << std::endl;
+        std::cout << "log:\u001b[32m command buffer created\u001b[37m" << std::endl;
     }
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
@@ -587,7 +587,7 @@ private:
     static std::vector<char> loadbin(const std::string& filename) {
         std::ifstream file(filename, std::ios::ate | std::ios::binary);
         if (!file.is_open()) {
-            throw std::runtime_error("Error:Failed to open file");
+            throw std::runtime_error("error:\u001b[31m Failed to open file\u001b[37m");
         }
         size_t fileSize = (size_t)file.tellg();
         std::vector<char> buffer(fileSize);
@@ -603,7 +603,7 @@ private:
         createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
         VkShaderModule shaderModule;
         if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create shader module!");
+            throw std::runtime_error("error:\u001b[31m failed to create shader module!\u001b[37m");
         }
         return shaderModule;
     }
@@ -791,7 +791,7 @@ public:
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create buffer!");
+            throw std::runtime_error("error:\u001b[31m failed to create buffer!\u001b[37m");
         }
 
         VkMemoryRequirements memRequirements;
@@ -803,7 +803,7 @@ public:
         allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
         if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate buffer memory!");
+            throw std::runtime_error("error:\u001b[31m failed to allocate buffer memory!\u001b[37m");
         }
 
         vkBindBufferMemory(device, buffer, bufferMemory, 0);
@@ -818,7 +818,7 @@ public:
             }
         }
 
-        throw std::runtime_error("failed to find suitable memory type!");
+        throw std::runtime_error("error:\u001b[31m failed to find suitable memory type!\u001b[37m");
     }
     void createPipeline(std::string vertshader, std::string fragshader, VkPipeline& graphicsPipeline, VkPipelineLayout& pipelineLayout, VkDescriptorSetLayout* descriptorSetLayout, int descriptorcnt, bool shadowusage, bool useresolutionscale, VkCullModeFlagBits cullmode) {
         auto vertShaderCode = loadbin(vertshader);
@@ -980,7 +980,7 @@ public:
         }
         pipelineInfo.subpass = 0;
         vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline);
-        std::cout << "log: pipeline created" << std::endl;
+        std::cout << "log:\u001b[32m pipeline created\u001b[37m" << std::endl;
     }
     void createvertexbuf(vertex* vertices, int size, VkBuffer& vertexBuffer, VkDeviceMemory& vertexBufferMemory) {
         VkBufferCreateInfo bufferInfo{};
@@ -1030,7 +1030,7 @@ public:
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         if (vkCreateImage(device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create image!");
+            throw std::runtime_error("error:\u001b[31m failed to create image!\u001b[37m");
         }
 
         VkMemoryRequirements memRequirements;
@@ -1042,7 +1042,7 @@ public:
         allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
         if (vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate image memory!");
+            throw std::runtime_error("error:\u001b[31m failed to allocate image memory!\u001b[37m");
         }
 
         vkBindImageMemory(device, image, imageMemory, 0);
@@ -1143,7 +1143,7 @@ public:
         platformname = "Linux";
 #endif
 
-        std::cout << "log: platform = " << platformname << std::endl;
+        std::cout << "log:\u001b[36m platform = " << platformname << "\u001b[37m" << std::endl;
         glfwInit();
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         if (fullscreen == true) {
@@ -1152,7 +1152,7 @@ public:
         else {
             window = glfwCreateWindow(resolution.x, resolution.y, (appname + " - " + platformname).c_str(), nullptr, nullptr);
         }
-        std::cout << "log: window created" << std::endl;
+        std::cout << "log:\u001b[36m window created\u001b[37m" << std::endl;
         createInstance(appname);
         createSurface();
 #endif
@@ -1179,7 +1179,7 @@ public:
         createDescriptorSetLayout();
         createPipeline(PostProcessVertexPath, PostProcessFragmentPath, graphicsPipeline, pipelineLayout, &descriptorSetLayout, 1, false, false, VK_CULL_MODE_NONE);
         createUniformBuffers(uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, descriptorPool, descriptorSets, descriptorSetLayout);
-        std::cout << "log: Render initied with success" << std::endl;
+        std::cout << "log:\u001b[32m Render initied with success\u001b[37m" << std::endl;
     }
     bool shouldterminate() {
 #if defined(__ANDROID__)
@@ -1859,14 +1859,14 @@ public:
         }
 
         VkDeviceSize imageSize = TexResolution.x * TexResolution.y * 4 * imagecount;
-        std::cout << "log: imagesize = " << imageSize << std::endl;
+        std::cout << "log:\u001b[36m imagesize = " << imageSize << "\u001b[37m" << std::endl;
         eng.createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
         void* data;
         vkMapMemory(eng.device, stagingBufferMemory, 0, imageSize, 0, &data);
         memcpy(data, pixels, static_cast<size_t>(imageSize));
         vkUnmapMemory(eng.device, stagingBufferMemory);
         mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(TexResolution.x, TexResolution.y)))) + 1;
-        std::cout << "log: " << mipLevels << " miplevels" << std::endl;
+        std::cout << "log:\u001b[36m " << mipLevels << " miplevels\u001b[37m" << std::endl;
         eng.createImage(TexResolution.x, TexResolution.y, mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory, imagecount);
         transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, eng, imagecount);
         copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(TexResolution.x), static_cast<uint32_t>(TexResolution.y), eng, imagecount);
@@ -1878,7 +1878,7 @@ public:
         vkFreeMemory(eng.device, stagingBufferMemory, nullptr);
 
         imageSize = cubeResolution.x * cubeResolution.y * 4 * cubecount * 6;
-        std::cout << "log: cube size = " << imageSize << std::endl;
+        std::cout << "log:\u001b[36m cube size = " << imageSize << "\u001b[37m" << std::endl;
         eng.createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
         vkMapMemory(eng.device, stagingBufferMemory, 0, imageSize, 0, &data);
         memcpy(data, cpixels, static_cast<size_t>(imageSize));

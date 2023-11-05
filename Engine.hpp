@@ -41,14 +41,14 @@ public:
 		ren.init(appname);
 		result = ma_engine_init(NULL, &aud);
 		if (result != MA_SUCCESS) {
-			std::cout << "error: failed to init miniaudio" << std::endl;
+			std::cout << "error:\u001b[31m failed to init miniaudio\u001b[37m" << std::endl;
 			exit(-1);
 		}
 		ren.pos = pos;
 		ren.rot = rot;
 		peng.pos = pos;
 		peng.lpos = pos;
-		std::cout << "log: engine inited with success" << std::endl;
+		std::cout << "log:\u001b[32m engine inited with success\u001b[37m" << std::endl;
 	}
 #endif
 	void beginShadowPass() {
@@ -191,14 +191,14 @@ public:
 		audio.maxdist = maxdist;
 		audio.create(eng.aud, eng.ren.pathprefix + audiopath);
 		assets.loadobj(eng.ren.pathprefix + modelpath);
-		std::cout << "log: model loaded" << std::endl;
+		std::cout << "log:\u001b[36m model loaded\u001b[32m" << std::endl;
 		unsigned char data[4] = { 0, 0, 0, 0 };
 		for (int i = 0; i != cubescount * 6; i++) {
 			cube.loadppm(eng.ren.pathprefix + cubespath[i]);
 		}
-		std::cout << "log: cubemaps loaded" << std::endl;
+		std::cout << "log:\u001b[36m cubemaps loaded\u001b[32m" << std::endl;
 		mesh.create(eng.ren, eng.ren.pathprefix + vertshader, eng.ren.pathprefix + fragshader, assets.vertex.data(), assets.uv.data(), assets.normals.data(), assets.vertex.size(), data, glm::ivec2(1, 1), 1, cube.pixels.data(), cube.textureResolution, cubescount);
-		std::cout << "log: object created" << std::endl;
+		std::cout << "log:\u001b[32m object created\u001b[32m" << std::endl;
 		withaudio = true;
 	}
 	void applyChanges(Engine& eng) {

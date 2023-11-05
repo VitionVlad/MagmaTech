@@ -20,7 +20,7 @@ public:
 	void create(ma_engine& eng, std::string path) {
 		result = ma_sound_init_from_file(&eng, path.c_str(), 0, NULL, NULL, &sound);
 		if (result != MA_SUCCESS) {
-			std::cout << "error: failed to init miniaudio sound, error code " << result;
+			std::cout << "error:\u001b[31m failed to init miniaudio sound, error code" << result << "\u001b[31m" << std::endl;
 			exit(result);
 		}
 	}

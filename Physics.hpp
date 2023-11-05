@@ -40,6 +40,7 @@ private:
 		return ((mx - high) * (mx - low) <= 0);
 	}
 	float dist = 0;
+	glm::vec3 laabb = glm::vec3(0, 0, 0);
 public:
 	bool canbedestroyed = true;
 	bool scalebool = false;
@@ -48,6 +49,7 @@ public:
 	bool collision = true;
 	int isinteracting = 0;
 	void physWork(PhysEngine& eng, glm::vec3& v1, glm::vec3& v2, glm::vec3& v3, glm::mat4& mtrans, glm::mat4& mrx, glm::mat4& mry, glm::mat4& mrz, glm::mat4& ms) {
+		laabb = glm::vec3(0, 0, 0);
 		isinteracting = 0;
 		center.x = (v1.x + v2.x + v3.x) / 3;
 		center.y = (v1.y + v2.y + v3.y) / 3;
@@ -56,10 +58,10 @@ public:
 		if (scalebool) {
 			center = ms * center;
 		}
-		if (scalebool) {
+		if (rotbool) {
 			center = mrx * mry * mrz * center;
 		}
-		if (scalebool) {
+		if (transbool) {
 			center = mtrans * center;
 		}
 		if (canbedestroyed) {
