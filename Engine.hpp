@@ -264,10 +264,10 @@ public:
 		glm::vec3 vert[6] = {
 			glm::vec3(0, 0 + size.y, 0),
 			glm::vec3(0, 0, 0),
-			glm::vec3(0 + size.y, 0, 0),
+			glm::vec3(0 + size.x, 0, 0),
 			glm::vec3(0, 0 + size.y, 0),
-			glm::vec3(0 + size.y, 0, 0),
-			glm::vec3(0 + size.y, 0 + size.y, 0)
+			glm::vec3(0 + size.x, 0, 0),
+			glm::vec3(0 + size.x, 0 + size.y, 0)
 		};
 		glm::vec2 luv[6] = {
 			glm::vec2(0, 1),
@@ -290,8 +290,6 @@ public:
 };
 
 class uiButton {
-private:
-	float aspect = 1.0f;
 public:
 	uiBanner button;
 	clickzone zone;
@@ -316,7 +314,6 @@ public:
 		size = bsize;
 	}
 	int Draw(Engine& eng, glm::vec2 pointer, bool ispressed) {
-		aspect = eng.ren.resolution.x / eng.ren.resolution.y;
 		button.pos = pos;
 		button.size = size;
 		zone.pos = pos;

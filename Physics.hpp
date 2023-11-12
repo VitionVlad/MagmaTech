@@ -11,6 +11,7 @@
 class Bomb{
 public:
 	float radius = 1;
+	float power = 1;
 	glm::vec3 pos = glm::vec3(0, 0, 0);
 	bool actioned = false;
 };
@@ -48,6 +49,7 @@ public:
 	bool transbool = false;
 	bool collision = true;
 	int isinteracting = 0;
+	float resistance = 0.5;
 	void physWork(PhysEngine& eng, glm::vec3& v1, glm::vec3& v2, glm::vec3& v3, glm::mat4& mtrans, glm::mat4& mrx, glm::mat4& mry, glm::mat4& mrz, glm::mat4& ms) {
 		laabb = glm::vec3(0, 0, 0);
 		isinteracting = 0;
@@ -67,7 +69,7 @@ public:
 		if (canbedestroyed) {
 			for (int i = 0; i != eng.bombs.size(); i++) {
 				dist = sqrt(pow(eng.bombs[i].pos.x - center.x, 2) + pow(eng.bombs[i].pos.y - center.y, 2) + pow(eng.bombs[i].pos.z - center.z, 2));
-				if (dist <= eng.bombs[i].radius && eng.bombs[i].actioned == false) {
+				if (dist <= eng.bombs[i].radius && eng.bombs[i].actioned == false && eng.bombs[i].power >= resistance) {
 					v1 = glm::vec3(0, 0, 0);
 					v2 = glm::vec3(0, 0, 0);
 					v3 = glm::vec3(0, 0, 0);

@@ -571,8 +571,8 @@ private:
         vkDestroyImage(device, MaindImage, nullptr);
         vkFreeMemory(device, MaindImageMemory, nullptr);
 
-        vkDestroyPipeline(device, graphicsPipeline, nullptr);
-        vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+        //vkDestroyPipeline(device, graphicsPipeline, nullptr);
+        //vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 
         createdepthbuffer();
         createmainimages();
@@ -581,7 +581,7 @@ private:
         createswfrm();
         createmainfrm();
         createDescriptorSetLayout();
-        createPipeline(PostProcessVertexPath, PostProcessFragmentPath, graphicsPipeline, pipelineLayout, &descriptorSetLayout, 1, false, false, VK_CULL_MODE_NONE);
+        //createPipeline(PostProcessVertexPath, PostProcessFragmentPath, graphicsPipeline, pipelineLayout, &descriptorSetLayout, 1, false, false, VK_CULL_MODE_NONE);
         createUniformBuffers(uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, descriptorPool, descriptorSets, descriptorSetLayout);
     }
     static std::vector<char> loadbin(const std::string& filename) {
@@ -783,6 +783,7 @@ public:
     bool shadowrecreated = false;
     bool fullscreen;
     bool uimat = false;
+    int clearvalcnt = 2;
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1198,16 +1199,6 @@ public:
 #endif
 
         if (ShadowMapResolution != oldShadowMapResolution) {
-            std::ofstream cfgwork{};
-            cfgwork.open(pathprefix + "eng/cfg/Render.cfg", std::ofstream::out | std::ofstream::trunc);
-            cfgwork << "vkver " << writeapiver << std::endl;
-            cfgwork << "vkphysdev " << choseddevice << std::endl;
-            cfgwork << "wsizex " << resolution.x << std::endl;
-            cfgwork << "wsizey " << resolution.y << std::endl;
-            cfgwork << "wfull " << fullscreen << std::endl;
-            cfgwork << "shadowres " << ShadowMapResolution << std::endl;
-            cfgwork << "renderscale " << resolutionscale << std::endl;
-            cfgwork.close();
             recreateShadowResources();
         }
 
@@ -1242,8 +1233,9 @@ public:
         std::vector<VkClearValue> clearColor(2);
         clearColor[0] = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
         clearColor[1].depthStencil = { 1.0f, 0 };
-        renderPassInfo.clearValueCount = 2;
+        renderPassInfo.clearValueCount = clearvalcnt;
         renderPassInfo.pClearValues = clearColor.data();
+        clearvalcnt = 0;
 
         vkCmdBeginRenderPass(commandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
@@ -1269,13 +1261,16 @@ public:
     }
     void endRender() {
         vkCmdEndRenderPass(commandBuffers[currentFrame]);
+    #if !defined(__ANDROID__)
+        glfwGetFramebufferSize(window, &resolution.x, &resolution.y);
+    #endif
         VkRenderPassBeginInfo passbeg{};
         passbeg.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         passbeg.renderPass = renderPass;
         passbeg.framebuffer = swapChainFramebuffers[currentFrame];
         passbeg.renderArea.offset = { 0, 0 };
         passbeg.renderArea.extent.width = resolution.x;
-        passbeg.renderArea.extent.height = resolution.y;
+        passbeg.renderArea.extent.height = resolution.y-1;
         std::vector<VkClearValue> clearColor(2);
         clearColor[0] = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
         clearColor[1].depthStencil = { 1.0f, 0 };
@@ -1293,14 +1288,14 @@ public:
         viewport.x = 0.0f;
         viewport.y = 0.0f;
         viewport.width = static_cast<float>(resolution.x);
-        viewport.height = static_cast<float>(resolution.y);
+        viewport.height = static_cast<float>(resolution.y-1);
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport(commandBuffers[currentFrame], 0, 1, &viewport);
         VkRect2D scissor{};
         scissor.offset = { 0, 0 };
         scissor.extent.width = resolution.x;
-        scissor.extent.height = resolution.y;
+        scissor.extent.height = resolution.y-1;
         vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
 
         vkCmdDraw(commandBuffers[currentFrame], 6, 1, 0, 0);
@@ -1347,13 +1342,7 @@ public:
 
         VkResult res = vkQueuePresentKHR(presentQueue, &presentInfo);
 
-        if (res == VK_ERROR_OUT_OF_DATE_KHR) {
-            recreateswap();
-        }
-        else if (resolution.x != oldres.x || resolution.y != oldres.y || resolutionscale != oldresolutionscale) {
-#if !defined(__ANDROID__)
-            glfwGetWindowSize(window, &resolution.x, &resolution.y);
-#endif
+        if (resolution.x != oldres.x || resolution.y != oldres.y || resolutionscale != oldresolutionscale || ShadowMapResolution != oldShadowMapResolution || res == VK_ERROR_OUT_OF_DATE_KHR) {
             std::ofstream cfgwork{};
             cfgwork.open(pathprefix + "eng/cfg/Render.cfg", std::ofstream::out | std::ofstream::trunc);
             cfgwork << "vkver " << writeapiver << std::endl;
@@ -1364,10 +1353,9 @@ public:
             cfgwork << "shadowres " << ShadowMapResolution << std::endl;
             cfgwork << "renderscale " << resolutionscale << std::endl;
             cfgwork.close();
-#if !defined(__ANDROID__)
-            glfwGetFramebufferSize(window, &resolution.x, &resolution.y);
-#endif
+            resolution.y -= 1;
             recreateswap();
+            resolution.y += 1;
         }
 
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
@@ -1378,6 +1366,7 @@ public:
         oldShadowMapResolution = ShadowMapResolution;
         alreadyran = false;
         shadowrecreated = false;
+        clearvalcnt = 2;
 #if defined(__ANDROID__)
 #elif defined(_WIN32) || defined(__linux__)
         glfwPollEvents();
