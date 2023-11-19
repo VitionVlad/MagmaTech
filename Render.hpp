@@ -404,8 +404,10 @@ private:
         vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
         colorAttachment[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
         vkCreateRenderPass(device, &renderPassInfo, nullptr, &mainPass);
-        colorAttachment[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         colorAttachment[1].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        colorAttachment[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        colorAttachment[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        colorAttachment[0].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         vkCreateRenderPass(device, &renderPassInfo, nullptr, &mainPasss);
         std::cout << "log:\u001b[32m main renderpass created\u001b[37m" << std::endl;
     }
