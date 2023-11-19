@@ -404,6 +404,9 @@ private:
         vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
         colorAttachment[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
         vkCreateRenderPass(device, &renderPassInfo, nullptr, &mainPass);
+        colorAttachment[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        colorAttachment[1].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        vkCreateRenderPass(device, &renderPassInfo, nullptr, &mainPasss);
         std::cout << "log:\u001b[32m main renderpass created\u001b[37m" << std::endl;
     }
     std::vector<VkFramebuffer> swapChainFramebuffers;
@@ -771,6 +774,7 @@ public:
     VkDevice device{};
     VkRenderPass renderPass{};
     VkRenderPass mainPass{};
+    VkRenderPass mainPasss{};
 #if defined(__ANDROID__)
 #elif defined(_WIN32) || defined(__linux__)
     GLFWwindow* window;
@@ -783,7 +787,7 @@ public:
     bool shadowrecreated = false;
     bool fullscreen;
     bool uimat = false;
-    int clearvalcnt = 2;
+    bool clear = true;
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1226,6 +1230,9 @@ public:
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = mainPass;
+        if (!clear) {
+            renderPassInfo.renderPass = mainPasss;
+        }
         renderPassInfo.framebuffer = MainFramebuffer;
         renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent.width = (int)(resolution.x * resolutionscale);
@@ -1233,9 +1240,9 @@ public:
         std::vector<VkClearValue> clearColor(2);
         clearColor[0] = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
         clearColor[1].depthStencil = { 1.0f, 0 };
-        renderPassInfo.clearValueCount = clearvalcnt;
+        renderPassInfo.clearValueCount = 2;
         renderPassInfo.pClearValues = clearColor.data();
-        clearvalcnt = 0;
+        clear = false;
 
         vkCmdBeginRenderPass(commandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
@@ -1366,7 +1373,7 @@ public:
         oldShadowMapResolution = ShadowMapResolution;
         alreadyran = false;
         shadowrecreated = false;
-        clearvalcnt = 2;
+        clear = true;
 #if defined(__ANDROID__)
 #elif defined(_WIN32) || defined(__linux__)
         glfwPollEvents();
