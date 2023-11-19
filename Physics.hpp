@@ -50,12 +50,24 @@ public:
 	bool collision = true;
 	int isinteracting = 0;
 	float resistance = 0.5;
+	bool flipy = true;
+	bool flipx = false;
+	bool flipz = false;
 	void physWork(PhysEngine& eng, glm::vec3& v1, glm::vec3& v2, glm::vec3& v3, glm::mat4& mtrans, glm::mat4& mrx, glm::mat4& mry, glm::mat4& mrz, glm::mat4& ms) {
 		laabb = glm::vec3(0, 0, 0);
 		isinteracting = 0;
 		center.x = (v1.x + v2.x + v3.x) / 3;
 		center.y = (v1.y + v2.y + v3.y) / 3;
 		center.z = (v1.z + v2.z + v3.z) / 3;
+		if (flipy) {
+			center.y = -center.y;
+		}
+		if (flipx) {
+			center.x = -center.x;
+		}
+		if (flipz) {
+			center.z = -center.z;
+		}
 		center.w = 1.0f;
 		if (scalebool) {
 			center = ms * center;
