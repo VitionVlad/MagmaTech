@@ -6,7 +6,7 @@ model loader (obj files)
 texture loader (ppm files)  
 shadowmap  
 resolution scale  
-full android support  
+full android support(at least support for android 14 and adreno gpus)  
 cubemap  
 ![Screenshot 2023-10-18 193733](https://github.com/VitionVlad/MagmaTech/assets/48290199/7f332c68-cb84-44a0-bce3-2fe7303679dd)
 shadow acne is caused by the model, you can ad bias in shader, or use correct models to avoid it  
