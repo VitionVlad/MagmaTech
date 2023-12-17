@@ -125,7 +125,7 @@ private:
         appinfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
         appinfo.pEngineName = "MagmaTech";
         appinfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        appinfo.apiVersion = VK_API_VERSION_1_3;
+        appinfo.apiVersion = VK_API_VERSION_1_0;
 
         if (!cfw) {
             std::string nm{};
@@ -306,7 +306,11 @@ private:
             }
         }
 
-        uint32_t imageCount = capabilities.minImageCount + 1;
+        uint32_t imageCount = capabilities.minImageCount;
+        MAX_FRAMES_IN_FLIGHT = capabilities.minImageCount;
+#if defined(__ANDROID__)
+        MAX_FRAMES_IN_FLIGHT++;
+#endif
         VkSwapchainCreateInfoKHR createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
         createInfo.surface = surface;
@@ -349,6 +353,7 @@ private:
         std::cout << "log:\u001b[32m swapchain images created\u001b[37m" << std::endl;
     }
     VkRenderPassCreateInfo renderPassInfo{};
+    VkRenderPassCreateInfo renderswPassInfo{};
     VkSubpassDependency dependency{};
     VkFormat depthformat = VK_FORMAT_D32_SFLOAT;
     void createshadowimages() {
@@ -363,8 +368,8 @@ private:
         createImageView(MainImageView, MainImage, VK_IMAGE_VIEW_TYPE_2D, 1, 1, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT);
         createImageView(MaindImageView, MaindImage, VK_IMAGE_VIEW_TYPE_2D, 1, 1, depthformat, VK_IMAGE_ASPECT_DEPTH_BIT);
     }
-    void createrepass() {
-        std::vector < VkAttachmentDescription> colorAttachment(2);
+    void createswrepass() {
+        std::vector < VkAttachmentDescription> colorAttachment(1);
         colorAttachment[0].format = surform[choseform].format;
         colorAttachment[0].samples = VK_SAMPLE_COUNT_1_BIT;
         colorAttachment[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -373,6 +378,43 @@ private:
         colorAttachment[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         colorAttachment[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         colorAttachment[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        std::vector<VkAttachmentReference> colorAttachmentRef(1);
+        colorAttachmentRef[0].attachment = 0;
+        colorAttachmentRef[0].layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        VkSubpassDescription subpass{};
+        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments = colorAttachmentRef.data();
+        renderswPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        renderswPassInfo.attachmentCount = 1;
+        renderswPassInfo.pAttachments = colorAttachment.data();
+        renderswPassInfo.subpassCount = 1;
+        renderswPassInfo.pSubpasses = &subpass;
+        renderswPassInfo.dependencyCount = 0;
+        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass = 0;
+        dependency.srcAccessMask = 0;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        renderswPassInfo.dependencyCount = 1;
+        renderswPassInfo.pDependencies = &dependency;
+        vkCreateRenderPass(device, &renderswPassInfo, nullptr, &swapChainrenderPass);
+        std::cout << "log:\u001b[32m main renderpass created\u001b[37m" << std::endl;
+    }
+    void createrepass() {
+        createswrepass();
+        std::vector < VkAttachmentDescription> colorAttachment(2);
+        colorAttachment[0].format = surform[choseform].format;
+        colorAttachment[0].samples = VK_SAMPLE_COUNT_1_BIT;
+        colorAttachment[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        colorAttachment[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAttachment[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorAttachment[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        colorAttachment[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        colorAttachment[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         colorAttachment[1].format = depthformat;
         colorAttachment[1].samples = VK_SAMPLE_COUNT_1_BIT;
@@ -401,6 +443,14 @@ private:
         renderPassInfo.subpassCount = 1;
         renderPassInfo.pSubpasses = &subpass;
         renderPassInfo.dependencyCount = 0;
+        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass = 0;
+        dependency.srcAccessMask = 0;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        renderPassInfo.dependencyCount = 1;
+        renderPassInfo.pDependencies = &dependency;
         vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
         colorAttachment[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
         vkCreateRenderPass(device, &renderPassInfo, nullptr, &mainPass);
@@ -414,65 +464,16 @@ private:
     std::vector<VkFramebuffer> swapChainFramebuffers;
     VkFramebuffer ShadowFramebuffer;
     VkFramebuffer MainFramebuffer;
-    void createdepthbuffer() {
-        VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(physicalDevice, depthformat, &props);
-        VkImageCreateInfo imagecreate{};
-        imagecreate.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        imagecreate.imageType = VK_IMAGE_TYPE_2D;
-        imagecreate.arrayLayers = 1;
-        imagecreate.extent.width = resolution.x;
-        imagecreate.extent.height = resolution.y;
-        imagecreate.extent.depth = 1;
-        imagecreate.format = depthformat;
-        imagecreate.tiling = VK_IMAGE_TILING_OPTIMAL;
-        imagecreate.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-        imagecreate.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        imagecreate.mipLevels = 1;
-        imagecreate.samples = VK_SAMPLE_COUNT_1_BIT;
-        imagecreate.queueFamilyIndexCount = 1;
-        imagecreate.pQueueFamilyIndices = &queueFamilyIndex;
-        imagecreate.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        vkCreateImage(device, &imagecreate, nullptr, &depthImage);
-
-        VkMemoryRequirements memRequirements;
-        vkGetImageMemoryRequirements(device, depthImage, &memRequirements);
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        vkAllocateMemory(device, &allocInfo, nullptr, &depthImageMemory);
-        vkBindImageMemory(device, depthImage, depthImageMemory, 0);
-
-        std::cout << "log:\u001b[32m depth image created\u001b[37m" << std::endl;
-        VkImageViewCreateInfo viewinfo{};
-        viewinfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        viewinfo.image = depthImage;
-        viewinfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        viewinfo.format = depthformat;
-        viewinfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewinfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewinfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewinfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewinfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        viewinfo.subresourceRange.baseMipLevel = 0;
-        viewinfo.subresourceRange.levelCount = 1;
-        viewinfo.subresourceRange.baseArrayLayer = 0;
-        viewinfo.subresourceRange.layerCount = 1;
-        vkCreateImageView(device, &viewinfo, nullptr, &depthImageView);
-        std::cout << "log:\u001b[32m image view created\u001b[37m" << std::endl;
-    }
     void createswfrm() {
         swapChainFramebuffers.resize(swapChainImageViews.size());
         for (size_t i = 0; i < swapChainImageViews.size(); i++) {
             VkImageView attachments[] = {
                     swapChainImageViews[i],
-                    depthImageView
             };
             VkFramebufferCreateInfo framebufferInfo{};
             framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebufferInfo.renderPass = renderPass;
-            framebufferInfo.attachmentCount = 2;
+            framebufferInfo.renderPass = swapChainrenderPass;
+            framebufferInfo.attachmentCount = 1;
             framebufferInfo.pAttachments = attachments;
             framebufferInfo.width = resolution.x;
             framebufferInfo.height = resolution.y;
@@ -579,7 +580,6 @@ private:
         //vkDestroyPipeline(device, graphicsPipeline, nullptr);
         //vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 
-        createdepthbuffer();
         createmainimages();
         vkDestroySwapchainKHR(device, swapChain, nullptr);
         createswapchain();
@@ -745,7 +745,7 @@ public:
     VkSampler RenderSampler{};
 
     bool shadowpass = false;
-    const int MAX_FRAMES_IN_FLIGHT = 2;
+    int MAX_FRAMES_IN_FLIGHT = 2;
     VkQueue graphicsQueue{};
     UniformBufferObject ubo{};
 
@@ -774,6 +774,7 @@ public:
     VkInstance instance{};
     VkQueue presentQueue{};
     VkDevice device{};
+    VkRenderPass swapChainrenderPass{};
     VkRenderPass renderPass{};
     VkRenderPass mainPass{};
     VkRenderPass mainPasss{};
@@ -985,6 +986,9 @@ public:
         if (useresolutionscale) {
             pipelineInfo.renderPass = mainPass;
         }
+        if (!useresolutionscale && !shadowusage) {
+            pipelineInfo.renderPass = swapChainrenderPass;
+        }
         pipelineInfo.subpass = 0;
         vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline);
         std::cout << "log:\u001b[32m pipeline created\u001b[37m" << std::endl;
@@ -1165,7 +1169,6 @@ public:
 #endif
         getDevice();
         createswapchain();
-        createdepthbuffer();
         createshadowimages();
         createmainimages();
         createrepass();
@@ -1203,20 +1206,21 @@ public:
     void beginRender() {
         glfwGetFramebufferSize(window, &resolution.x, &resolution.y);
 #endif
+        imageIndex = 0;
 
         if (ShadowMapResolution != oldShadowMapResolution) {
             recreateShadowResources();
         }
 
-        vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-        vkResetFences(device, 1, &inFlightFences[currentFrame]);
-
         VkResult res = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
         if (res == VK_ERROR_OUT_OF_DATE_KHR) {
             recreateswap();
         }
-        vkResetCommandBuffer(commandBuffers[currentFrame], 0);
 
+        vkWaitForFences(device, inFlightFences.size(), inFlightFences.data(), VK_TRUE, UINT64_MAX);
+        vkResetFences(device, inFlightFences.size(), inFlightFences.data());
+
+        vkResetCommandBuffer(commandBuffers[currentFrame], 0);
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = 0;
@@ -1270,20 +1274,19 @@ public:
     }
     void endRender() {
         vkCmdEndRenderPass(commandBuffers[currentFrame]);
-    #if !defined(__ANDROID__)
+#if !defined(__ANDROID__)
         glfwGetFramebufferSize(window, &resolution.x, &resolution.y);
-    #endif
+#endif
         VkRenderPassBeginInfo passbeg{};
         passbeg.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        passbeg.renderPass = renderPass;
+        passbeg.renderPass = swapChainrenderPass;
         passbeg.framebuffer = swapChainFramebuffers[currentFrame];
         passbeg.renderArea.offset = { 0, 0 };
         passbeg.renderArea.extent.width = resolution.x;
-        passbeg.renderArea.extent.height = resolution.y-1;
-        std::vector<VkClearValue> clearColor(2);
+        passbeg.renderArea.extent.height = resolution.y - 1;
+        std::vector<VkClearValue> clearColor(1);
         clearColor[0] = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
-        clearColor[1].depthStencil = { 1.0f, 0 };
-        passbeg.clearValueCount = 2;
+        passbeg.clearValueCount = 1;
         passbeg.pClearValues = clearColor.data();
         memcpy(uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 
@@ -1297,19 +1300,20 @@ public:
         viewport.x = 0.0f;
         viewport.y = 0.0f;
         viewport.width = static_cast<float>(resolution.x);
-        viewport.height = static_cast<float>(resolution.y-1);
+        viewport.height = static_cast<float>(resolution.y);
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport(commandBuffers[currentFrame], 0, 1, &viewport);
         VkRect2D scissor{};
         scissor.offset = { 0, 0 };
         scissor.extent.width = resolution.x;
-        scissor.extent.height = resolution.y-1;
+        scissor.extent.height = resolution.y;
         vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
 
         vkCmdDraw(commandBuffers[currentFrame], 6, 1, 0, 0);
 
         vkCmdEndRenderPass(commandBuffers[currentFrame]);
+
         vkEndCommandBuffer(commandBuffers[currentFrame]);
 
         VkSubmitInfo submitInfo{};
@@ -1327,16 +1331,6 @@ public:
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
         vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
-
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass = 0;
-        dependency.srcAccessMask = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-        renderPassInfo.dependencyCount = 1;
-        renderPassInfo.pDependencies = &dependency;
 
         VkPresentInfoKHR presentInfo{};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -1362,9 +1356,7 @@ public:
             cfgwork << "shadowres " << ShadowMapResolution << std::endl;
             cfgwork << "renderscale " << resolutionscale << std::endl;
             cfgwork.close();
-            resolution.y -= 1;
             recreateswap();
-            resolution.y += 1;
         }
 
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
@@ -1376,6 +1368,7 @@ public:
         alreadyran = false;
         shadowrecreated = false;
         clear = true;
+
 #if defined(__ANDROID__)
 #elif defined(_WIN32) || defined(__linux__)
         glfwPollEvents();

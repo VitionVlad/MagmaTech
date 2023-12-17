@@ -70,6 +70,7 @@ int main(){
     test.scale.y = -1;
     test.mesh.cullmode = VK_CULL_MODE_FRONT_BIT;
     test.mesh.shadowcullmode = VK_CULL_MODE_BACK_BIT;
+    test.phys.flipy = true;
 
 	test.createNoCube(eng, "data/raw/vert.spv", "data/raw/frag.spv", "data/m.obj", texpaths, 3/*, "data/test.mp3", 1*/);
     cube.scale = glm::vec3(1000, 1000, 1000);
@@ -97,7 +98,7 @@ int main(){
 		test.Draw(eng);
         cube.Draw(eng);
         
-        std::cout << ban1.Draw(eng, glm::vec2(mousepos.x, mousepos.y), (state == GLFW_PRESS)) << std::endl;
+        //std::cout << ban1.Draw(eng, glm::vec2(mousepos.x, mousepos.y), (state == GLFW_PRESS)) << std::endl;
 
 		eng.endRender();
 	}
