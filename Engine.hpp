@@ -201,12 +201,14 @@ public:
 		std::cout << "log:\u001b[32m object created\u001b[32m" << std::endl;
 		withaudio = true;
 	}
-	void applyChanges(Engine& eng) {
+	void applyChanges(Engine& eng) {  
 		mesh.applyChanges(eng.ren);
 	}
 	void Draw(Engine& eng) {
 		mesh.pos = pos;
 		audio.pos = pos;
+		phys.pos = pos;
+		phys.scale = scale;
 		mesh.rot = rot;
 		mesh.scale = scale;
 		if (withaudio) {
@@ -236,12 +238,12 @@ public:
 		banner.mesh.cullmode = VK_CULL_MODE_NONE;
 		banner.enablecollisiondetect = false;
 		glm::vec3 vert[6] = {
-			glm::vec3(0, 0 + size.y, 0),
+			glm::vec3(0, 0 + 1, 0),
 			glm::vec3(0, 0, 0),
-			glm::vec3(0 + size.y, 0, 0),
-			glm::vec3(0, 0 + size.y, 0),
-			glm::vec3(0 + size.y, 0, 0),
-			glm::vec3(0 + size.y, 0 + size.y, 0)
+			glm::vec3(0 + 1, 0, 0),
+			glm::vec3(0, 0 + 1, 0),
+			glm::vec3(0 + 1, 0, 0),
+			glm::vec3(0 + 1, 0 + 1, 0)
 		};
 		glm::vec2 luv[6] = {
 			uv[0],
@@ -262,12 +264,12 @@ public:
 		banner.mesh.cullmode = VK_CULL_MODE_NONE;
 		banner.enablecollisiondetect = false;
 		glm::vec3 vert[6] = {
-			glm::vec3(0, 0 + size.y, 0),
+			glm::vec3(0, 0 + 1, 0),
 			glm::vec3(0, 0, 0),
-			glm::vec3(0 + size.x, 0, 0),
-			glm::vec3(0, 0 + size.y, 0),
-			glm::vec3(0 + size.x, 0, 0),
-			glm::vec3(0 + size.x, 0 + size.y, 0)
+			glm::vec3(0 + 1, 0, 0),
+			glm::vec3(0, 0 + 1, 0),
+			glm::vec3(0 + 1, 0, 0),
+			glm::vec3(0 + 1, 0 + 1, 0)
 		};
 		glm::vec2 luv[6] = {
 			glm::vec2(0, 1),
@@ -279,11 +281,69 @@ public:
 		};
 		assets.loadppm(pathtotex);
 		unsigned char c[24]{};
+		banner.scale.x = size.x;
+		banner.scale.y = size.y;
 		banner.create(eng, vertshader, fragshader, vert, luv, vert, 6, assets.pixels.data(), assets.textureResolution, 1, c, glm::ivec2(1, 1), 1);
+	}
+	void create(Engine& eng, glm::vec2 bpos, glm::vec2 bsize, unsigned char* pixels, glm::ivec2 resolution, std::string vertshader, std::string fragshader) {
+		pos = bpos;
+		size = bsize;
+		banner.pos = glm::vec3(bpos.x, bpos.y, -depth);
+		banner.mesh.cullmode = VK_CULL_MODE_NONE;
+		banner.enablecollisiondetect = false;
+		glm::vec3 vert[6] = {
+			glm::vec3(0, 0 + 1, 0),
+			glm::vec3(0, 0, 0),
+			glm::vec3(0 + 1, 0, 0),
+			glm::vec3(0, 0 + 1, 0),
+			glm::vec3(0 + 1, 0, 0),
+			glm::vec3(0 + 1, 0 + 1, 0)
+		};
+		glm::vec2 luv[6] = {
+			glm::vec2(0, 1),
+			glm::vec2(0, 0),
+			glm::vec2(1, 0),
+			glm::vec2(0, 1),
+			glm::vec2(1, 0),
+			glm::vec2(1, 1)
+		};
+		banner.scale.x = size.x;
+		banner.scale.y = size.y;
+		unsigned char c[24]{};
+		banner.create(eng, vertshader, fragshader, vert, luv, vert, 6, pixels, resolution, 1, c, glm::ivec2(1, 1), 1);
+	}
+	void create(Engine& eng, glm::vec2 bpos, glm::vec2 uv0, glm::vec2 uv1, glm::vec2 bsize, unsigned char* pixels, glm::ivec2 resolution, std::string vertshader, std::string fragshader) {
+		pos = bpos;
+		size = bsize;
+		banner.pos = glm::vec3(bpos.x, bpos.y, -depth);
+		banner.mesh.cullmode = VK_CULL_MODE_NONE;
+		banner.enablecollisiondetect = false;
+		glm::vec3 vert[6] = {
+			glm::vec3(0, 1, 0),
+			glm::vec3(0, 0, 0),
+			glm::vec3(1, 0, 0),
+			glm::vec3(0, 1, 0),
+			glm::vec3(1, 0, 0),
+			glm::vec3(1, 1, 0)
+		};
+		glm::vec2 luv[6] = {
+			glm::vec2(uv0.x, uv1.y),
+			glm::vec2(uv0.x, uv0.y),
+			glm::vec2(uv1.x, uv0.y),
+			glm::vec2(uv0.x, uv1.y),
+			glm::vec2(uv1.x, uv0.y),
+			glm::vec2(uv1.x, uv1.y)
+		};
+		unsigned char c[24]{};
+		banner.scale.x = size.x;
+		banner.scale.y = size.y;
+		banner.create(eng, vertshader, fragshader, vert, luv, vert, 6, pixels, resolution, 1, c, glm::ivec2(1, 1), 1);
 	}
 	void Draw(Engine& eng) {
 		eng.ren.uimat = true;
 		banner.pos = glm::vec3(pos.x, pos.y, -depth);
+		banner.scale.x = size.x;
+		banner.scale.y = size.y;
 		banner.Draw(eng);
 		eng.ren.uimat = false;
 	}
@@ -320,5 +380,43 @@ public:
 		zone.size = size;
 		button.Draw(eng);
 		return zone.action(glm::vec2(pointer.x, pointer.y), ispressed);
+	}
+};
+
+class uiText {
+private:
+	Loader assets{};
+public:
+	int symsize = 100;
+	int rsymsize = 100;
+	int symcnt = 52;
+	std::vector<uiBanner> symbols;
+	std::vector<char> syms;
+	void create(Engine& eng,int lsymsize, int lsymcnt, std::string pathtotex, std::string vertshader, std::string fragshader,const char* symbolstype) {
+		symsize = lsymsize;
+		symcnt = lsymcnt;
+		rsymsize = lsymsize;
+		assets.loadppm(pathtotex);
+		symbols.resize(symcnt);
+		syms.resize(symcnt);
+		float uvtoadd = (float)symsize/assets.textureResolution.x;
+		std::cout << uvtoadd << " " << symsize << " " << assets.textureResolution.x << " " << symsize / assets.textureResolution.x << std::endl;
+		for (int i = 0; i != symcnt; i++) {
+			syms[i] = symbolstype[i];
+			symbols[i].create(eng, glm::vec2(0, 0), glm::vec2(uvtoadd * i, 0), glm::vec2(uvtoadd * (i + 1), 1), glm::vec2(symsize, 2 * symsize), assets.pixels.data(), assets.textureResolution, vertshader, fragshader);
+		}
+	}
+	void Draw(Engine& eng, glm::ivec2 pos, std::string text) {
+		for (int i = 0; i != text.length(); i++) {
+			for (int n = 0; n != symcnt; n++) {
+				if (syms[n] == text.c_str()[i]) {
+					symbols[n].pos.x = pos.x+(rsymsize*i);
+					symbols[n].pos.y = pos.y;
+					symbols[n].size.x = rsymsize;
+					symbols[n].size.y = rsymsize*2;
+					symbols[n].Draw(eng);
+				}
+			}
+		}
 	}
 };

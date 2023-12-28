@@ -43,6 +43,8 @@ private:
 	float dist = 0;
 	glm::vec3 laabb = glm::vec3(0, 0, 0);
 public:
+	glm::vec3 pos = glm::vec3(0, 0, 0);
+	glm::vec3 scale = glm::vec3(1, 1, 1);
 	bool canbedestroyed = true;
 	bool scalebool = false;
 	bool rotbool = false;
@@ -53,12 +55,24 @@ public:
 	bool flipy = true;
 	bool flipx = false;
 	bool flipz = false;
+	bool simplemove = true;
+	bool simplescale = true;
 	void physWork(PhysEngine& eng, glm::vec3& v1, glm::vec3& v2, glm::vec3& v3, glm::mat4& mtrans, glm::mat4& mrx, glm::mat4& mry, glm::mat4& mrz, glm::mat4& ms) {
 		laabb = glm::vec3(0, 0, 0);
 		isinteracting = 0;
 		center.x = (v1.x + v2.x + v3.x) / 3;
 		center.y = (v1.y + v2.y + v3.y) / 3;
 		center.z = (v1.z + v2.z + v3.z) / 3;
+		if (simplescale) {
+			center.x *= scale.x;
+			center.y *= scale.y;
+			center.z *= scale.z;
+		}
+		if (simplemove) {
+			center.x += pos.x;
+			center.y += pos.y;
+			center.z += pos.z;
+		}
 		if (flipy) {
 			center.y = -center.y;
 		}

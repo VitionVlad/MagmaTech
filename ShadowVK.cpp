@@ -70,7 +70,6 @@ int main(){
     test.scale.y = -1;
     test.mesh.cullmode = VK_CULL_MODE_FRONT_BIT;
     test.mesh.shadowcullmode = VK_CULL_MODE_BACK_BIT;
-    test.phys.flipy = true;
 
 	test.createNoCube(eng, "data/raw/vert.spv", "data/raw/frag.spv", "data/m.obj", texpaths, 3/*, "data/test.mp3", 1*/);
     cube.scale = glm::vec3(1000, 1000, 1000);
@@ -78,12 +77,14 @@ int main(){
     cube.createNoTex(eng, "data/raw/vertc.spv", "data/raw/fragc.spv", "data/cube.obj", cubemap, 1);
     cube.enablecollisiondetect = false;
 
-    uiButton ban1;
-    ban1.create(eng, glm::vec2(0, 0), glm::vec2(100, 100), "data/right.ppm", "data/raw/uivert.spv", "data/raw/uifrag.spv");
+    uiText text1;
+    text1.create(eng, 100, 52, "data/symbols/sym.ppm", "data/raw/uivert.spv", "data/raw/uifrag.spv", "ABCDEFGHIKLMNOPQRTUVWXYZabcdefghiklmnopqrstuvwxyz0123456789,.;: ");
+    text1.rsymsize = 25;
 
     int state;
 
-	while (eng.ren.shouldterminate()) {
+    std::cout << "render begin" << std::endl;
+ 	while (eng.ren.shouldterminate()) {
         glfwGetCursorPos(eng.ren.window, &mousepos.x, &mousepos.y);
         eng.rot.y = mousepos.x / eng.ren.resolution.x;
         eng.rot.x = -mousepos.y / eng.ren.resolution.y;
@@ -97,8 +98,7 @@ int main(){
 
 		test.Draw(eng);
         cube.Draw(eng);
-        
-        //std::cout << ban1.Draw(eng, glm::vec2(mousepos.x, mousepos.y), (state == GLFW_PRESS)) << std::endl;
+        text1.Draw(eng, glm::vec2(0, 0), "Hello");
 
 		eng.endRender();
 	}

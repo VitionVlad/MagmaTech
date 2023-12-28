@@ -1272,6 +1272,7 @@ public:
 
         vkCmdBeginRenderPass(commandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
+    bool renderswitch = false;
     void endRender() {
         vkCmdEndRenderPass(commandBuffers[currentFrame]);
 #if !defined(__ANDROID__)
@@ -1368,6 +1369,7 @@ public:
         alreadyran = false;
         shadowrecreated = false;
         clear = true;
+        renderswitch = !renderswitch;
 
 #if defined(__ANDROID__)
 #elif defined(_WIN32) || defined(__linux__)
@@ -1571,46 +1573,53 @@ private:
         layoutInfo.pBindings = bindings.data();
         vkCreateDescriptorSetLayout(eng.device, &layoutInfo, nullptr, &descriptorSetLayout);
     }
+    int maxrep = 1;
+    int rendert = 1;
+    int createdbuff = 0;
     void createUniformBuffers(std::vector<VkBuffer>& uniformBuffers, std::vector<VkDeviceMemory>& uniformBuffersMemory, std::vector<void*>& uniformBuffersMapped, VkDescriptorPool& descriptorPool, std::vector<VkDescriptorSet>& descriptorSets, VkDescriptorSetLayout& descriptorSetLayout, VkSampler& textureSampler, VkImageView& textureImageView, Render& eng) {
         VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
-        uniformBuffers.resize(eng.MAX_FRAMES_IN_FLIGHT);
-        uniformBuffersMemory.resize(eng.MAX_FRAMES_IN_FLIGHT);
-        uniformBuffersMapped.resize(eng.MAX_FRAMES_IN_FLIGHT);
+        if (maxrep > createdbuff) {
+            uniformBuffers.resize(eng.MAX_FRAMES_IN_FLIGHT * maxrep);
+            uniformBuffersMemory.resize(eng.MAX_FRAMES_IN_FLIGHT * maxrep);
+            uniformBuffersMapped.resize(eng.MAX_FRAMES_IN_FLIGHT * maxrep);
 
-        for (size_t i = 0; i < eng.MAX_FRAMES_IN_FLIGHT; i++) {
-            eng.createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
-            vkMapMemory(eng.device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
+            for (size_t i = createdbuff* eng.MAX_FRAMES_IN_FLIGHT; i < eng.MAX_FRAMES_IN_FLIGHT * maxrep; i++) {
+                eng.createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
+                vkMapMemory(eng.device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
+            }
+            createdbuff = maxrep;
         }
 
         std::array<VkDescriptorPoolSize, 4> poolSizes{};
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSizes[0].descriptorCount = static_cast<uint32_t>(eng.MAX_FRAMES_IN_FLIGHT);
+        poolSizes[0].descriptorCount = static_cast<uint32_t>(eng.MAX_FRAMES_IN_FLIGHT * maxrep);
         poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSizes[1].descriptorCount = static_cast<uint32_t>(eng.MAX_FRAMES_IN_FLIGHT);
+        poolSizes[1].descriptorCount = static_cast<uint32_t>(eng.MAX_FRAMES_IN_FLIGHT * maxrep);
         poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSizes[2].descriptorCount = static_cast<uint32_t>(eng.MAX_FRAMES_IN_FLIGHT);
+        poolSizes[2].descriptorCount = static_cast<uint32_t>(eng.MAX_FRAMES_IN_FLIGHT * maxrep);
         poolSizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSizes[3].descriptorCount = static_cast<uint32_t>(eng.MAX_FRAMES_IN_FLIGHT);
+        poolSizes[3].descriptorCount = static_cast<uint32_t>(eng.MAX_FRAMES_IN_FLIGHT * maxrep);
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
         poolInfo.pPoolSizes = poolSizes.data();
-        poolInfo.maxSets = static_cast<uint32_t>(eng.MAX_FRAMES_IN_FLIGHT);
+        poolInfo.maxSets = static_cast<uint32_t>(eng.MAX_FRAMES_IN_FLIGHT * maxrep);
 
         vkCreateDescriptorPool(eng.device, &poolInfo, nullptr, &descriptorPool);
 
-        std::vector<VkDescriptorSetLayout> layouts(eng.MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
+        std::vector<VkDescriptorSetLayout> layouts(eng.MAX_FRAMES_IN_FLIGHT * maxrep, descriptorSetLayout);
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = descriptorPool;
-        allocInfo.descriptorSetCount = eng.MAX_FRAMES_IN_FLIGHT;
+        allocInfo.descriptorPool = descriptorPool; 
+
+        allocInfo.descriptorSetCount = eng.MAX_FRAMES_IN_FLIGHT * maxrep;
         allocInfo.pSetLayouts = layouts.data();
-        descriptorSets.resize(eng.MAX_FRAMES_IN_FLIGHT);
+        descriptorSets.resize(eng.MAX_FRAMES_IN_FLIGHT * maxrep);
         vkAllocateDescriptorSets(eng.device, &allocInfo, descriptorSets.data());
 
-        for (size_t i = 0; i < eng.MAX_FRAMES_IN_FLIGHT; i++) {
+        for (size_t i = 0; i < eng.MAX_FRAMES_IN_FLIGHT * maxrep; i++) {
             VkDescriptorBufferInfo bufferInfo{};
             bufferInfo.buffer = uniformBuffers[i];
             bufferInfo.offset = 0;
@@ -1790,6 +1799,7 @@ private:
             }
         }
     }
+    bool lmfr = true;
 public:
     VkCullModeFlagBits cullmode = VK_CULL_MODE_BACK_BIT;
     VkCullModeFlagBits shadowcullmode = VK_CULL_MODE_FRONT_BIT;
@@ -1894,6 +1904,18 @@ public:
         eng.createPipeline(eng.ShadowVertexPath, eng.ShadowFragmentPath, graphicsPipelineShadow, pipelineLayout, &descriptorSetLayout, 1, true, false, shadowcullmode);
     }
     void Draw(Render& eng) {
+        if (lmfr == eng.renderswitch) {
+            rendert++;
+            if (maxrep < rendert) {
+                maxrep = rendert;
+                vkFreeDescriptorSets(eng.device, descriptorPool, eng.MAX_FRAMES_IN_FLIGHT, descriptorSets.data());
+                vkDestroyDescriptorPool(eng.device, descriptorPool, nullptr);
+                createUniformBuffers(uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, descriptorPool, descriptorSets, descriptorSetLayout, textureSampler, textureImageView, eng);
+            }
+        }
+        else {
+            rendert = 1;
+        }
         if (eng.shadowrecreated == true) {
             createUniformBuffers(uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, descriptorPool, descriptorSets, descriptorSetLayout, textureSampler, textureImageView, eng);
         }
@@ -1906,7 +1928,7 @@ public:
         eng.ubo.resolution.x = (int)eng.resolution.x * eng.resolutionscale;
         eng.ubo.resolution.y = (int)eng.resolution.y * eng.resolutionscale;
 
-        memcpy(uniformBuffersMapped[eng.currentFrame], &eng.ubo, sizeof(eng.ubo));
+        memcpy(uniformBuffersMapped[eng.currentFrame + eng.MAX_FRAMES_IN_FLIGHT * (rendert-1)], &eng.ubo, sizeof(eng.ubo));
         memcpy(vdata, vertexdata.data(), sizeof(vertexdata[0]) * totalvertex);
 
         VkBuffer vertexBuffers[] = { vertexBuffer };
@@ -1921,7 +1943,7 @@ public:
 
         vkCmdBindVertexBuffers(eng.commandBuffers[eng.currentFrame], 0, 1, vertexBuffers, offsets);
 
-        vkCmdBindDescriptorSets(eng.commandBuffers[eng.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[eng.currentFrame], 0, nullptr);
+        vkCmdBindDescriptorSets(eng.commandBuffers[eng.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[eng.currentFrame + eng.MAX_FRAMES_IN_FLIGHT * (rendert - 1)], 0, nullptr);
 
         VkViewport viewport{};
         viewport.x = 0.0f;
@@ -1947,5 +1969,6 @@ public:
         vkCmdSetScissor(eng.commandBuffers[eng.currentFrame], 0, 1, &scissor);
 
         vkCmdDraw(eng.commandBuffers[eng.currentFrame], totalvertex, 1, 0, 0);
+        lmfr = eng.renderswitch;
     }
 };
