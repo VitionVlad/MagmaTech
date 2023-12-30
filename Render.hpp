@@ -1579,6 +1579,8 @@ private:
     void createUniformBuffers(std::vector<VkBuffer>& uniformBuffers, std::vector<VkDeviceMemory>& uniformBuffersMemory, std::vector<void*>& uniformBuffersMapped, VkDescriptorPool& descriptorPool, std::vector<VkDescriptorSet>& descriptorSets, VkDescriptorSetLayout& descriptorSetLayout, VkSampler& textureSampler, VkImageView& textureImageView, Render& eng) {
         VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
+        maxrep *= 2;
+
         if (maxrep > createdbuff) {
             uniformBuffers.resize(eng.MAX_FRAMES_IN_FLIGHT * maxrep);
             uniformBuffersMemory.resize(eng.MAX_FRAMES_IN_FLIGHT * maxrep);
@@ -1679,6 +1681,7 @@ private:
 
             vkUpdateDescriptorSets(eng.device, static_cast<uint32_t>(descriptorWrite.size()), descriptorWrite.data(), 0, nullptr);
         }
+        maxrep /= 2;
     }
     void generateMipmaps(VkImage& image, int32_t texWidth, int32_t texHeight, uint32_t imagecount, Render& eng) {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands(eng);

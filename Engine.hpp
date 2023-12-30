@@ -279,7 +279,7 @@ public:
 			glm::vec2(1, 0),
 			glm::vec2(1, 1)
 		};
-		assets.loadppm(pathtotex);
+		assets.loadppm(eng.ren.pathprefix + pathtotex);
 		unsigned char c[24]{};
 		banner.scale.x = size.x;
 		banner.scale.y = size.y;
@@ -396,7 +396,7 @@ public:
 		symsize = lsymsize;
 		symcnt = lsymcnt;
 		rsymsize = lsymsize;
-		assets.loadppm(pathtotex);
+		assets.loadppm(eng.ren.pathprefix+pathtotex);
 		symbols.resize(symcnt);
 		syms.resize(symcnt);
 		float uvtoadd = (float)symsize/assets.textureResolution.x;
