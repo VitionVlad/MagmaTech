@@ -51,7 +51,7 @@ int main(){
     eng.ren.resolutionscale = 1;
     eng.pos.z = -2;
     eng.pos.y = 8;
-    eng.ren.uselayer = true;
+    //eng.ren.uselayer = true;
 	eng.init("test");
     glfwSetInputMode(eng.ren.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     eng.ren.ShadowOrtho = true;
@@ -91,21 +91,17 @@ int main(){
         eng.rot.x = -mousepos.y / eng.ren.resolution.y;
         movecallback();
         state = glfwGetMouseButton(eng.ren.window, GLFW_MOUSE_BUTTON_LEFT);
-        std::cout << "renbeg" << std::endl;
         eng.beginShadowPass();
 
         test.Draw(eng);
 
-        std::cout << "mpassbeg" << std::endl;
         eng.beginMainPass();
 
 		test.Draw(eng);
         cube.Draw(eng);
         text1.Draw(eng, glm::vec2(0, 0), "Hello");
 
-        std::cout << "endbeg" << std::endl;
 		eng.endRender();
-        std::cout << "endend" << std::endl;
 	}
 	//eng.terminate();
 }

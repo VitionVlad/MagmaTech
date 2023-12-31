@@ -170,13 +170,11 @@ private:
         lprop.resize(layercont);
         vkEnumerateInstanceLayerProperties(&layercont, lprop.data());
         std::vector<char*>layerNames{};
-        //layerNames.resize(layercont);
-        //for (int i = 0; i != layercont; i++) {
-        //    layerNames[i] = lprop[i].layerName;
-        //    std::cout << "log:\u001b[36m Enabling Instance Layer:" << lprop[i].layerName << "\u001b[37m" << std::endl;
-        //}
-        layerNames.resize(1);
-        layerNames[0] = lprop[8].layerName;
+        layerNames.resize(layercont);
+        for (int i = 0; i != layercont; i++) {
+            layerNames[i] = lprop[i].layerName;
+            std::cout << "log:\u001b[36m Enabling Instance Layer:" << lprop[i].layerName << "\u001b[37m" << std::endl;
+        }
 
         createInfo.ppEnabledLayerNames = layerNames.data();
         createInfo.enabledLayerCount = layerNames.size();
@@ -322,7 +320,7 @@ private:
         createInfo.imageExtent.width = resolution.x;
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+        createInfo.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
         createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
         createInfo.oldSwapchain = VK_NULL_HANDLE;
