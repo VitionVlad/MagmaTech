@@ -30,7 +30,7 @@ public:
 				pixels[i] = i1;
 				pixels[i + 1] = i2;
 				pixels[i + 2] = i3;
-				pixels[i + 3] = 256;
+				pixels[i + 3] = 255;
 			}
 		}
 		else {
@@ -42,7 +42,7 @@ public:
 				pixels[i + 1] = c;
 				readimage.get(c);
 				pixels[i + 2] = c;
-				pixels[i + 3] = 256;
+				pixels[i + 3] = 255;
 			}
 		}
 		imagecount++;

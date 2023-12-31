@@ -164,18 +164,19 @@ private:
         createInfo.enabledExtensionCount = glfwExtensionCount;
         createInfo.ppEnabledExtensionNames = glfwExtensions;
 #endif
-
         uint32_t layercont = 0;
         std::vector<VkLayerProperties> lprop{};
         vkEnumerateInstanceLayerProperties(&layercont, nullptr);
         lprop.resize(layercont);
         vkEnumerateInstanceLayerProperties(&layercont, lprop.data());
         std::vector<char*>layerNames{};
-        layerNames.resize(layercont);
-        for (int i = 0; i != layercont; i++) {
-            layerNames[i] = lprop[i].layerName;
-            std::cout << "log:\u001b[36m Enabling Instance Layer:" << lprop[i].layerName << "\u001b[37m" << std::endl;
-        }
+        //layerNames.resize(layercont);
+        //for (int i = 0; i != layercont; i++) {
+        //    layerNames[i] = lprop[i].layerName;
+        //    std::cout << "log:\u001b[36m Enabling Instance Layer:" << lprop[i].layerName << "\u001b[37m" << std::endl;
+        //}
+        layerNames.resize(1);
+        layerNames[0] = lprop[8].layerName;
 
         createInfo.ppEnabledLayerNames = layerNames.data();
         createInfo.enabledLayerCount = layerNames.size();
@@ -184,8 +185,8 @@ private:
             createInfo.enabledLayerCount = 0;
         }
 
-        vkCreateInstance(&createInfo, nullptr, &instance);
-        std::cout << "log:\u001b[32m instance created\u001b[37m" << std::endl;
+        VkResult res = vkCreateInstance(&createInfo, nullptr, &instance);
+        std::cout << "log:\u001b[32m instance created with code \u001b[37m" << res << std::endl;
     }
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDeviceQueueCreateInfo queueinfo{};
@@ -307,7 +308,7 @@ private:
         }
 
         uint32_t imageCount = capabilities.minImageCount;
-        MAX_FRAMES_IN_FLIGHT = capabilities.minImageCount;
+        MAX_FRAMES_IN_FLIGHT = imageCount;
 #if defined(__ANDROID__)
         MAX_FRAMES_IN_FLIGHT++;
 #endif
@@ -1206,19 +1207,17 @@ public:
     void beginRender() {
         glfwGetFramebufferSize(window, &resolution.x, &resolution.y);
 #endif
-        imageIndex = 0;
-
         if (ShadowMapResolution != oldShadowMapResolution) {
             recreateShadowResources();
         }
+
+        vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+        vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
         VkResult res = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
         if (res == VK_ERROR_OUT_OF_DATE_KHR) {
             recreateswap();
         }
-
-        vkWaitForFences(device, inFlightFences.size(), inFlightFences.data(), VK_TRUE, UINT64_MAX);
-        vkResetFences(device, inFlightFences.size(), inFlightFences.data());
 
         vkResetCommandBuffer(commandBuffers[currentFrame], 0);
         VkCommandBufferBeginInfo beginInfo{};
@@ -1328,20 +1327,18 @@ public:
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
 
-        VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
         submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = signalSemaphores;
+        submitInfo.pSignalSemaphores = &renderFinishedSemaphores[currentFrame];
         vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
 
         VkPresentInfoKHR presentInfo{};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = signalSemaphores;
+        presentInfo.pWaitSemaphores = &renderFinishedSemaphores[currentFrame];
 
-        VkSwapchainKHR swapChains[] = { swapChain };
         presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = swapChains;
+        presentInfo.pSwapchains = &swapChain;
         presentInfo.pImageIndices = &imageIndex;
 
         VkResult res = vkQueuePresentKHR(presentQueue, &presentInfo);
@@ -1579,8 +1576,6 @@ private:
     void createUniformBuffers(std::vector<VkBuffer>& uniformBuffers, std::vector<VkDeviceMemory>& uniformBuffersMemory, std::vector<void*>& uniformBuffersMapped, VkDescriptorPool& descriptorPool, std::vector<VkDescriptorSet>& descriptorSets, VkDescriptorSetLayout& descriptorSetLayout, VkSampler& textureSampler, VkImageView& textureImageView, Render& eng) {
         VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
-        maxrep *= 2;
-
         if (maxrep > createdbuff) {
             uniformBuffers.resize(eng.MAX_FRAMES_IN_FLIGHT * maxrep);
             uniformBuffersMemory.resize(eng.MAX_FRAMES_IN_FLIGHT * maxrep);
@@ -1681,7 +1676,6 @@ private:
 
             vkUpdateDescriptorSets(eng.device, static_cast<uint32_t>(descriptorWrite.size()), descriptorWrite.data(), 0, nullptr);
         }
-        maxrep /= 2;
     }
     void generateMipmaps(VkImage& image, int32_t texWidth, int32_t texHeight, uint32_t imagecount, Render& eng) {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands(eng);
@@ -1910,7 +1904,7 @@ public:
         if (lmfr == eng.renderswitch) {
             rendert++;
             if (maxrep < rendert) {
-                maxrep = rendert;
+                maxrep = rendert*rendert;
                 vkFreeDescriptorSets(eng.device, descriptorPool, eng.MAX_FRAMES_IN_FLIGHT, descriptorSets.data());
                 vkDestroyDescriptorPool(eng.device, descriptorPool, nullptr);
                 createUniformBuffers(uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, descriptorPool, descriptorSets, descriptorSetLayout, textureSampler, textureImageView, eng);
