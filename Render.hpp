@@ -1173,6 +1173,10 @@ public:
         std::cout << "log:\u001b[36m platform = " << platformname << "\u001b[37m" << std::endl;
         glfwInit();
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+        glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+        glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+        glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
         if (fullscreen == true) {
             window = glfwCreateWindow(resolution.x, resolution.y, (appname + " - " + platformname).c_str(), glfwGetPrimaryMonitor(), nullptr);
         }
@@ -1369,7 +1373,9 @@ public:
             cfgwork << "shadowres " << ShadowMapResolution << std::endl;
             cfgwork << "renderscale " << resolutionscale << std::endl;
             cfgwork.close();
+            resolution.y -= 1;
             recreateswap();
+            resolution.y += 1;
         }
 
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
