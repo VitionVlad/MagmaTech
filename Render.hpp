@@ -164,7 +164,6 @@ private:
         createInfo.enabledExtensionCount = glfwExtensionCount;
         createInfo.ppEnabledExtensionNames = glfwExtensions;
 #endif
-
         uint32_t layercont = 0;
         std::vector<VkLayerProperties> lprop{};
         vkEnumerateInstanceLayerProperties(&layercont, nullptr);
@@ -184,8 +183,8 @@ private:
             createInfo.enabledLayerCount = 0;
         }
 
-        vkCreateInstance(&createInfo, nullptr, &instance);
-        std::cout << "log:\u001b[32m instance created\u001b[37m" << std::endl;
+        VkResult res = vkCreateInstance(&createInfo, nullptr, &instance);
+        std::cout << "log:\u001b[32m instance created with code \u001b[37m" << res << std::endl;
     }
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDeviceQueueCreateInfo queueinfo{};
@@ -306,8 +305,8 @@ private:
             }
         }
 
-        uint32_t imageCount = capabilities.minImageCount;
-        MAX_FRAMES_IN_FLIGHT = capabilities.minImageCount;
+        uint32_t imageCount = capabilities.minImageCount + 1;
+        MAX_FRAMES_IN_FLIGHT = imageCount;
 #if defined(__ANDROID__)
         MAX_FRAMES_IN_FLIGHT++;
 #endif
@@ -321,7 +320,7 @@ private:
         createInfo.imageExtent.width = resolution.x;
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+        createInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
         createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
         createInfo.oldSwapchain = VK_NULL_HANDLE;
@@ -1117,6 +1116,23 @@ public:
         resolution.y = ANativeWindow_getHeight(window);
         createInstance(appname);
         createSurface(window);
+        std::ifstream cfgwork{};
+        cfgwork.open(pathprefix + "eng/cfg/Render.cfg");
+
+        if (!cfw) {
+            std::string param;
+            float argument;
+            while (cfgwork >> param >> argument) {
+                if (param == "shadowres") {
+                    ShadowMapResolution = (int)argument;
+                    oldShadowMapResolution = (int)argument;
+                }
+                if (param == "renderscale") {
+                    resolutionscale = argument;
+                    oldresolutionscale = argument;
+                }
+            }
+        }
 #else
     void init(std::string appname) {
         std::ifstream cfgwork{};
@@ -1206,19 +1222,17 @@ public:
     void beginRender() {
         glfwGetFramebufferSize(window, &resolution.x, &resolution.y);
 #endif
-        imageIndex = 0;
-
         if (ShadowMapResolution != oldShadowMapResolution) {
             recreateShadowResources();
         }
+
+        vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+        vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
         VkResult res = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
         if (res == VK_ERROR_OUT_OF_DATE_KHR) {
             recreateswap();
         }
-
-        vkWaitForFences(device, inFlightFences.size(), inFlightFences.data(), VK_TRUE, UINT64_MAX);
-        vkResetFences(device, inFlightFences.size(), inFlightFences.data());
 
         vkResetCommandBuffer(commandBuffers[currentFrame], 0);
         VkCommandBufferBeginInfo beginInfo{};
@@ -1328,20 +1342,18 @@ public:
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
 
-        VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
         submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = signalSemaphores;
+        submitInfo.pSignalSemaphores = &renderFinishedSemaphores[currentFrame];
         vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
 
         VkPresentInfoKHR presentInfo{};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = signalSemaphores;
+        presentInfo.pWaitSemaphores = &renderFinishedSemaphores[currentFrame];
 
-        VkSwapchainKHR swapChains[] = { swapChain };
         presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = swapChains;
+        presentInfo.pSwapchains = &swapChain;
         presentInfo.pImageIndices = &imageIndex;
 
         VkResult res = vkQueuePresentKHR(presentQueue, &presentInfo);
@@ -1579,14 +1591,12 @@ private:
     void createUniformBuffers(std::vector<VkBuffer>& uniformBuffers, std::vector<VkDeviceMemory>& uniformBuffersMemory, std::vector<void*>& uniformBuffersMapped, VkDescriptorPool& descriptorPool, std::vector<VkDescriptorSet>& descriptorSets, VkDescriptorSetLayout& descriptorSetLayout, VkSampler& textureSampler, VkImageView& textureImageView, Render& eng) {
         VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
-        maxrep *= 2;
-
         if (maxrep > createdbuff) {
             uniformBuffers.resize(eng.MAX_FRAMES_IN_FLIGHT * maxrep);
             uniformBuffersMemory.resize(eng.MAX_FRAMES_IN_FLIGHT * maxrep);
             uniformBuffersMapped.resize(eng.MAX_FRAMES_IN_FLIGHT * maxrep);
 
-            for (size_t i = createdbuff* eng.MAX_FRAMES_IN_FLIGHT; i < eng.MAX_FRAMES_IN_FLIGHT * maxrep; i++) {
+            for (size_t i = createdbuff * eng.MAX_FRAMES_IN_FLIGHT; i < eng.MAX_FRAMES_IN_FLIGHT * maxrep; i++) {
                 eng.createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
                 vkMapMemory(eng.device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
             }
@@ -1614,7 +1624,7 @@ private:
         std::vector<VkDescriptorSetLayout> layouts(eng.MAX_FRAMES_IN_FLIGHT * maxrep, descriptorSetLayout);
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = descriptorPool; 
+        allocInfo.descriptorPool = descriptorPool;
 
         allocInfo.descriptorSetCount = eng.MAX_FRAMES_IN_FLIGHT * maxrep;
         allocInfo.pSetLayouts = layouts.data();
@@ -1681,7 +1691,6 @@ private:
 
             vkUpdateDescriptorSets(eng.device, static_cast<uint32_t>(descriptorWrite.size()), descriptorWrite.data(), 0, nullptr);
         }
-        maxrep /= 2;
     }
     void generateMipmaps(VkImage& image, int32_t texWidth, int32_t texHeight, uint32_t imagecount, Render& eng) {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands(eng);
@@ -1910,7 +1919,7 @@ public:
         if (lmfr == eng.renderswitch) {
             rendert++;
             if (maxrep < rendert) {
-                maxrep = rendert;
+                maxrep = rendert * rendert;
                 vkFreeDescriptorSets(eng.device, descriptorPool, eng.MAX_FRAMES_IN_FLIGHT, descriptorSets.data());
                 vkDestroyDescriptorPool(eng.device, descriptorPool, nullptr);
                 createUniformBuffers(uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, descriptorPool, descriptorSets, descriptorSetLayout, textureSampler, textureImageView, eng);
@@ -1931,7 +1940,7 @@ public:
         eng.ubo.resolution.x = (int)eng.resolution.x * eng.resolutionscale;
         eng.ubo.resolution.y = (int)eng.resolution.y * eng.resolutionscale;
 
-        memcpy(uniformBuffersMapped[eng.currentFrame + eng.MAX_FRAMES_IN_FLIGHT * (rendert-1)], &eng.ubo, sizeof(eng.ubo));
+        memcpy(uniformBuffersMapped[eng.currentFrame + eng.MAX_FRAMES_IN_FLIGHT * (rendert - 1)], &eng.ubo, sizeof(eng.ubo));
         memcpy(vdata, vertexdata.data(), sizeof(vertexdata[0]) * totalvertex);
 
         VkBuffer vertexBuffers[] = { vertexBuffer };
