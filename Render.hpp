@@ -1373,9 +1373,13 @@ public:
             cfgwork << "shadowres " << ShadowMapResolution << std::endl;
             cfgwork << "renderscale " << resolutionscale << std::endl;
             cfgwork.close();
-            resolution.y -= 1;
+            if (fullscreen) {
+                resolution.y -= 1;
+            }
             recreateswap();
-            resolution.y += 1;
+            if (fullscreen) {
+                resolution.y += 1;
+            }
         }
 
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
