@@ -1789,7 +1789,7 @@ private:
                 eng.ubo.projection = glm::ortho(-eng.fov, eng.fov, -eng.fov, eng.fov, eng.zNear, eng.zFar);
             }
             else {
-                eng.ubo.projection = glm::perspective(eng.fov, (float)eng.resolution.x / eng.resolution.y, eng.zNear, eng.zFar);
+                eng.ubo.projection = glm::perspective(glm::radians(eng.fov), (float)eng.resolution.x / eng.resolution.y, eng.zNear, eng.zFar);
             }
             eng.ubo.translate = glm::translate(glm::mat4(1.0f), glm::vec3(eng.pos.x, eng.pos.y, eng.pos.z));
             eng.ubo.rotx = glm::rotate(glm::mat4(1.0f), eng.rot.x, glm::vec3(1, 0, 0));
