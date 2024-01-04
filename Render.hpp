@@ -1131,6 +1131,9 @@ public:
                     resolutionscale = argument;
                     oldresolutionscale = argument;
                 }
+                if (param == "fov") {
+                    fov = argument;
+                }
             }
         }
 #else
@@ -1158,6 +1161,9 @@ public:
                 if (param == "renderscale") {
                     resolutionscale = argument;
                     oldresolutionscale = argument;
+                }
+                if (param == "fov") {
+                    fov = argument;
                 }
             }
         }
@@ -1372,14 +1378,11 @@ public:
             cfgwork << "wfull " << fullscreen << std::endl;
             cfgwork << "shadowres " << ShadowMapResolution << std::endl;
             cfgwork << "renderscale " << resolutionscale << std::endl;
+            cfgwork << "fov " << fov << std::endl;
             cfgwork.close();
-            if (fullscreen) {
-                resolution.y -= 1;
-            }
+            resolution.y -= 1;
             recreateswap();
-            if (fullscreen) {
-                resolution.y += 1;
-            }
+            resolution.y += 1;
         }
 
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
